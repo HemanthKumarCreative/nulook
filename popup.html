@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -13,7 +13,7 @@
         <div class="logo-icon">👗</div>
         <div class="logo-text">
           <h1>HIMYT TryON</h1>
-          <p class="tagline">AI-Powered Virtual Try-On</p>
+          <p class="tagline">Essayage Virtuel Alimenté par IA</p>
         </div>
       </div>
     </header>
@@ -27,8 +27,11 @@
             <div class="step-header">
               <div class="step-number">1</div>
               <div class="step-content">
-                <h2>Upload Your Photo</h2>
-                <p>Choose a clear photo of yourself for the best results</p>
+                <h2>Téléchargez Votre Photo</h2>
+                <p>
+                  Choisissez une photo claire de vous-même pour de meilleurs
+                  résultats
+                </p>
               </div>
             </div>
 
@@ -44,9 +47,11 @@
               <label for="person-image" class="upload-label">
                 <div class="upload-icon">📸</div>
                 <div class="upload-text">
-                  <span class="upload-title">Click to upload your photo</span>
+                  <span class="upload-title"
+                    >Cliquez pour télécharger votre photo</span
+                  >
                   <span class="upload-subtitle"
-                    >PNG, JPG, or WebP up to 10MB</span
+                    >PNG, JPG, ou WebP jusqu'à 10MB</span
                   >
                 </div>
               </label>
@@ -54,20 +59,20 @@
 
             <div id="person-preview-container" class="hidden">
               <div class="preview-header">
-                <h3>Your Photo</h3>
+                <h3>Votre Photo</h3>
                 <button
                   type="button"
                   class="change-photo-btn"
                   onclick="document.getElementById('person-image').click()"
                 >
-                  Change Photo
+                  Changer la Photo
                 </button>
               </div>
               <div class="preview-image-container">
                 <img
                   id="person-preview-image"
                   src=""
-                  alt="Your Photo Preview"
+                  alt="Aperçu de Votre Photo"
                 />
               </div>
             </div>
@@ -78,28 +83,31 @@
             <div class="step-header">
               <div class="step-number">2</div>
               <div class="step-content">
-                <h2>Select Clothing Item</h2>
-                <p>Choose any clothing item from this webpage</p>
+                <h2>Sélectionner un Article de Vêtement</h2>
+                <p>
+                  Choisissez n'importe quel article de vêtement de cette page
+                  web
+                </p>
               </div>
             </div>
 
             <div id="clothing-preview-container" class="hidden">
               <div class="preview-header">
-                <h3>Selected Item</h3>
+                <h3>Article Sélectionné</h3>
                 <button
                   type="button"
                   id="remove-selection-btn"
                   class="change-selection-btn"
                 >
                   <span class="btn-icon">↶</span>
-                  Change Selection
+                  Changer la Sélection
                 </button>
               </div>
               <div class="preview-image-container">
                 <img
                   id="clothing-preview-image"
                   src=""
-                  alt="Selected Clothing"
+                  alt="Vêtement Sélectionné"
                 />
               </div>
             </div>
@@ -107,7 +115,9 @@
             <div id="website-images-container" class="gallery-container">
               <div class="gallery-loading">
                 <div class="loading-spinner"></div>
-                <p class="loading-text">Scanning page for clothing items...</p>
+                <p class="loading-text">
+                  Analyse de la page pour les articles de vêtements...
+                </p>
               </div>
             </div>
           </section>
@@ -117,7 +127,7 @@
         <div class="generate-section">
           <button type="submit" id="generate-btn" class="generate-btn">
             <span class="btn-icon">✨</span>
-            <span class="btn-text">Generate Virtual Try-On</span>
+            <span class="btn-text">Générer l'Essayage Virtuel</span>
             <div class="btn-loading hidden">
               <div class="loading-spinner"></div>
             </div>
@@ -131,22 +141,26 @@
       <!-- Results -->
       <div id="result-container" class="hidden">
         <div class="result-header">
-          <h3>Your Virtual Try-On Result</h3>
-          <p class="result-subtitle">Here's how the clothing looks on you!</p>
+          <h3>Votre Résultat d'Essayage Virtuel</h3>
+          <p class="result-subtitle">Voici comment le vêtement vous va !</p>
         </div>
         <div class="result-image-container">
-          <img id="result-image" src="" alt="Generated Virtual Try-On Result" />
+          <img
+            id="result-image"
+            src=""
+            alt="Résultat d'Essayage Virtuel Généré"
+          />
         </div>
         <button type="button" id="download-btn" class="download-btn">
           <span class="btn-icon">💾</span>
-          <span class="btn-text">Download Image</span>
+          <span class="btn-text">Télécharger l'Image</span>
         </button>
       </div>
     </main>
 
     <!-- Footer -->
     <footer class="footer">
-      <p>Powered by HIMYT AI Technology</p>
+      <p>Alimenté par la Technologie IA HIMYT</p>
     </footer>
 
     <script src="popup.js"></script>

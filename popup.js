@@ -135,11 +135,11 @@ function setBusy(isBusy) {
 
   if (isBusy) {
     btnLoading.classList.remove("hidden");
-    btnText.textContent = "Generating...";
+    btnText.textContent = "Génération...";
     btnIcon.textContent = "⏳";
   } else {
     btnLoading.classList.add("hidden");
-    btnText.textContent = "Generate Virtual Try-On";
+    btnText.textContent = "Générer l'Essayage Virtuel";
     btnIcon.textContent = "✨";
   }
 }
@@ -180,9 +180,9 @@ function renderImageGallery(imageUrls) {
     galleryContainer.innerHTML = `
       <div class="gallery-loading">
         <div style="font-size: 2rem; margin-bottom: 1rem;">🔍</div>
-        <p class="loading-text">No suitable images found on this page.</p>
+        <p class="loading-text">Aucune image appropriée trouvée sur cette page.</p>
         <p style="font-size: 0.75rem; color: #666; margin-top: 0.5rem;">
-          Try browsing a clothing or fashion website for better results.
+          Essayez de naviguer sur un site de vêtements ou de mode pour de meilleurs résultats.
         </p>
       </div>
     `;
@@ -194,8 +194,8 @@ function renderImageGallery(imageUrls) {
   corsNote.className = "cors-note";
   corsNote.innerHTML = `
     <p style="font-size: 12px; color: #666; margin-bottom: 10px; padding: 8px; background: #f8f9fa; border-radius: 4px;">
-      <strong>Note:</strong> Some images may not display due to website restrictions. 
-      You can still select them for virtual try-on.
+      <strong>Note :</strong> Certaines images peuvent ne pas s'afficher en raison des restrictions du site web. 
+      Vous pouvez toujours les sélectionner pour l'essayage virtuel.
     </p>
   `;
   galleryContainer.appendChild(corsNote);
@@ -205,7 +205,7 @@ function renderImageGallery(imageUrls) {
     img.src = url;
     img.loading = "lazy";
     img.decoding = "async";
-    img.title = "Click to select this item";
+    img.title = "Cliquez pour sélectionner cet article";
     img.crossOrigin = "anonymous"; // Try to enable CORS for the image
 
     // Handle image load errors (including CORS issues)
@@ -214,14 +214,15 @@ function renderImageGallery(imageUrls) {
       // Add a placeholder or error indicator
       img.style.border = "2px dashed #ff6b6b";
       img.style.opacity = "0.7";
-      img.title = "Image may not be accessible due to website restrictions";
+      img.title =
+        "L'image peut ne pas être accessible en raison des restrictions du site web";
     });
 
     img.addEventListener("load", () => {
       // Remove any error styling if the image loads successfully
       img.style.border = "";
       img.style.opacity = "";
-      img.title = "Click to select this item";
+      img.title = "Cliquez pour sélectionner cet article";
     });
 
     img.addEventListener("click", () => handleImageSelection(url));
@@ -272,7 +273,7 @@ function updateGenerateButtonState() {
  */
 function handleDownloadImage() {
   if (!resultImage.src) {
-    setStatus("No image to download.");
+    setStatus("Aucune image à télécharger.");
     return;
   }
 
@@ -283,10 +284,12 @@ function handleDownloadImage() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    setStatus("💾 Image downloaded successfully! Check your downloads folder.");
+    setStatus(
+      "💾 Image téléchargée avec succès ! Vérifiez votre dossier de téléchargements."
+    );
   } catch (error) {
     console.error("Download failed:", error);
-    setStatus("❌ Download failed. Please try again.");
+    setStatus("❌ Échec du téléchargement. Veuillez réessayer.");
   }
 }
 
@@ -298,7 +301,7 @@ async function handleFormSubmit(event) {
 
   if (!personImageInput.files[0] || !selectedClothingUrl) {
     setStatus(
-      "📸 Please upload your photo and select a clothing item to continue."
+      "📸 Veuillez télécharger votre photo et sélectionner un article de vêtement pour continuer."
     );
     return;
   }
@@ -309,7 +312,7 @@ async function handleFormSubmit(event) {
   }
   inFlightController = new AbortController();
 
-  setStatus("🎯 Preparing your virtual try-on experience...");
+  setStatus("🎯 Préparation de votre expérience d'essayage virtuel...");
   resultContainer.classList.add("hidden");
   resultImage.src = "";
   enableDownload(false);
@@ -317,7 +320,7 @@ async function handleFormSubmit(event) {
 
   try {
     // Step 1: Fetch the selected website image with CORS handling
-    setStatus("📥 Fetching clothing image from website...");
+    setStatus("📥 Récupération de l'image de vêtement depuis le site web...");
     const clothingBlob = await fetchImageWithCorsHandling(
       selectedClothingUrl,
       inFlightController.signal
@@ -330,7 +333,7 @@ async function handleFormSubmit(event) {
     formData.append("itemImage", clothingBlob, "clothing-item.jpg");
 
     // Step 3: Send to the backend (expects JSON response)
-    setStatus("💫 Let us do the magic... This may take a moment.");
+    setStatus("💫 Laissez-nous faire la magie... Cela peut prendre un moment.");
 
     const apiResponse = await fetch(API_URL, {
       method: "POST",
@@ -353,7 +356,7 @@ async function handleFormSubmit(event) {
       // Standardized backend error
       const msg =
         (data.error && (data.error.message || data.error.code)) ||
-        "Failed to generate image.";
+        "Échec de la génération de l'image.";
       throw new Error(msg);
     }
 
@@ -361,17 +364,17 @@ async function handleFormSubmit(event) {
     const mime = data.output?.image?.mimeType || "image/png";
     const base64 = data.output?.image?.base64;
     if (!base64) {
-      throw new Error("No image found in response.");
+      throw new Error("Aucune image trouvée dans la réponse.");
     }
 
     const dataURL = `data:${mime};base64,${base64}`;
     resultImage.src = dataURL;
     resultContainer.classList.remove("hidden");
-    setStatus("🎉 Amazing! Your virtual try-on is ready!");
+    setStatus("🎉 Incroyable ! Votre essayage virtuel est prêt !");
     enableDownload(true);
   } catch (error) {
     if (error?.name === "AbortError") {
-      setStatus("Request cancelled.");
+      setStatus("Demande annulée.");
     } else {
       console.error("Error:", error);
 
@@ -381,17 +384,17 @@ async function handleFormSubmit(event) {
         error?.message?.includes("fetch strategies failed")
       ) {
         setStatus(
-          "🚫 Unable to access image due to website restrictions. Try selecting a different image or browse a different website."
+          "🚫 Impossible d'accéder à l'image en raison des restrictions du site web. Essayez de sélectionner une image différente ou naviguez sur un autre site web."
         );
       } else if (error?.message?.includes("Failed to fetch")) {
         setStatus(
-          "🌐 Network error: Unable to fetch the selected image. Please check your internet connection and try again."
+          "🌐 Erreur réseau : Impossible de récupérer l'image sélectionnée. Veuillez vérifier votre connexion internet et réessayer."
         );
       } else {
         setStatus(
           `❌ ${
             error?.message ||
-            "Failed to generate your virtual try-on. Please try again."
+            "Échec de la génération de votre essayage virtuel. Veuillez réessayer."
           }`
         );
       }
@@ -422,7 +425,7 @@ document.addEventListener("DOMContentLoaded", () => {
       galleryContainer.innerHTML = `
         <div class="gallery-loading">
           <div style="font-size: 2rem; margin-bottom: 1rem;">⚠️</div>
-          <p class="loading-text">No active tab found.</p>
+          <p class="loading-text">Aucun onglet actif trouvé.</p>
         </div>
       `;
       return;
@@ -445,9 +448,9 @@ document.addEventListener("DOMContentLoaded", () => {
               galleryContainer.innerHTML = `
                 <div class="gallery-loading">
                   <div style="font-size: 2rem; margin-bottom: 1rem;">🚫</div>
-                  <p class="loading-text">Cannot access images on this page.</p>
+                  <p class="loading-text">Impossible d'accéder aux images sur cette page.</p>
                   <p style="font-size: 0.75rem; color: #666; margin-top: 0.5rem;">
-                    Try browsing a regular website instead of system pages.
+                    Essayez de naviguer sur un site web normal au lieu des pages système.
                   </p>
                 </div>
               `;
@@ -462,9 +465,9 @@ document.addEventListener("DOMContentLoaded", () => {
         galleryContainer.innerHTML = `
           <div class="gallery-loading">
             <div style="font-size: 2rem; margin-bottom: 1rem;">⚠️</div>
-            <p class="loading-text">Cannot access images on this page.</p>
+            <p class="loading-text">Impossible d'accéder aux images sur cette page.</p>
             <p style="font-size: 0.75rem; color: #666; margin-top: 0.5rem;">
-              Please refresh the page and try again.
+              Veuillez actualiser la page et réessayer.
             </p>
           </div>
         `;

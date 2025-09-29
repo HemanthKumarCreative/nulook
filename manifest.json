@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "HIMYT TryON",
   "version": "2.0",
-  "description": "Transform your style with AI-powered virtual try-on. Select clothing from any website and see how it looks on you instantly.",
+  "description": "Transformez votre style avec l'essayage virtuel alimenté par IA. Sélectionnez des vêtements de n'importe quel site web et voyez comment ils vous vont instantanément.",
   "icons": {
     "16": "icon.svg",
     "48": "icon.svg",
