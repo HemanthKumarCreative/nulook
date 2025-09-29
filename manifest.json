@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "HIMYT TryON",
+  "version": "2.0",
+  "description": "Transform your style with AI-powered virtual try-on. Select clothing from any website and see how it looks on you instantly.",
+  "icons": {
+    "16": "icon.svg",
+    "48": "icon.svg",
+    "128": "icon.svg"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icon.svg",
+      "48": "icon.svg",
+      "128": "icon.svg"
+    }
+  },
+  "permissions": ["activeTab", "scripting"],
+  "host_permissions": ["http://localhost:3000/*", "http://*/*", "https://*/*"]
+}

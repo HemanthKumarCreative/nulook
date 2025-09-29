@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HIMYT TryON</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <!-- Header -->
+    <header class="header">
+      <div class="logo">
+        <div class="logo-icon">👗</div>
+        <div class="logo-text">
+          <h1>HIMYT TryON</h1>
+          <p class="tagline">AI-Powered Virtual Try-On</p>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <form id="tryon-form">
+        <div class="steps-container">
+          <!-- Step 1: Upload Photo -->
+          <section class="step">
+            <div class="step-header">
+              <div class="step-number">1</div>
+              <div class="step-content">
+                <h2>Upload Your Photo</h2>
+                <p>Choose a clear photo of yourself for the best results</p>
+              </div>
+            </div>
+
+            <div class="upload-area">
+              <input
+                type="file"
+                id="person-image"
+                name="personImage"
+                accept="image/*"
+                required
+                class="file-input"
+              />
+              <label for="person-image" class="upload-label">
+                <div class="upload-icon">📸</div>
+                <div class="upload-text">
+                  <span class="upload-title">Click to upload your photo</span>
+                  <span class="upload-subtitle"
+                    >PNG, JPG, or WebP up to 10MB</span
+                  >
+                </div>
+              </label>
+            </div>
+
+            <div id="person-preview-container" class="hidden">
+              <div class="preview-header">
+                <h3>Your Photo</h3>
+                <button
+                  type="button"
+                  class="change-photo-btn"
+                  onclick="document.getElementById('person-image').click()"
+                >
+                  Change Photo
+                </button>
+              </div>
+              <div class="preview-image-container">
+                <img
+                  id="person-preview-image"
+                  src=""
+                  alt="Your Photo Preview"
+                />
+              </div>
+            </div>
+          </section>
+
+          <!-- Step 2: Select Clothing -->
+          <section class="step">
+            <div class="step-header">
+              <div class="step-number">2</div>
+              <div class="step-content">
+                <h2>Select Clothing Item</h2>
+                <p>Choose any clothing item from this webpage</p>
+              </div>
+            </div>
+
+            <div id="clothing-preview-container" class="hidden">
+              <div class="preview-header">
+                <h3>Selected Item</h3>
+                <button
+                  type="button"
+                  id="remove-selection-btn"
+                  class="change-selection-btn"
+                >
+                  <span class="btn-icon">↶</span>
+                  Change Selection
+                </button>
+              </div>
+              <div class="preview-image-container">
+                <img
+                  id="clothing-preview-image"
+                  src=""
+                  alt="Selected Clothing"
+                />
+              </div>
+            </div>
+
+            <div id="website-images-container" class="gallery-container">
+              <div class="gallery-loading">
+                <div class="loading-spinner"></div>
+                <p class="loading-text">Scanning page for clothing items...</p>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <!-- Generate Button -->
+        <div class="generate-section">
+          <button type="submit" id="generate-btn" class="generate-btn">
+            <span class="btn-icon">✨</span>
+            <span class="btn-text">Generate Virtual Try-On</span>
+            <div class="btn-loading hidden">
+              <div class="loading-spinner"></div>
+            </div>
+          </button>
+        </div>
+      </form>
+
+      <!-- Status -->
+      <div id="status" class="status-message"></div>
+
+      <!-- Results -->
+      <div id="result-container" class="hidden">
+        <div class="result-header">
+          <h3>Your Virtual Try-On Result</h3>
+          <p class="result-subtitle">Here's how the clothing looks on you!</p>
+        </div>
+        <div class="result-image-container">
+          <img id="result-image" src="" alt="Generated Virtual Try-On Result" />
+        </div>
+        <button type="button" id="download-btn" class="download-btn">
+          <span class="btn-icon">💾</span>
+          <span class="btn-text">Download Image</span>
+        </button>
+      </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <p>Powered by HIMYT AI Technology</p>
+    </footer>
+
+    <script src="popup.js"></script>
+  </body>
+</html>
