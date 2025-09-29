@@ -4,6 +4,14 @@
 let selectedClothingUrl = null;
 let inFlightController = null;
 
+// --- Storage Keys ---
+const STORAGE_KEYS = {
+  UPLOADED_IMAGE: "himyt_tryon_uploaded_image",
+  GENERATED_IMAGE: "himyt_tryon_generated_image",
+  SELECTED_CLOTHING_URL: "himyt_tryon_selected_clothing_url",
+  LAST_SESSION_DATA: "himyt_tryon_last_session",
+};
+
 // --- DOM Elements ---
 const form = document.getElementById("tryon-form");
 const personImageInput = document.getElementById("person-image");
@@ -20,6 +28,7 @@ const statusDiv = document.getElementById("status");
 const resultContainer = document.getElementById("result-container");
 const resultImage = document.getElementById("result-image");
 const downloadButton = document.getElementById("download-btn");
+const clearStorageButton = document.getElementById("clear-storage-btn");
 
 // Backend URL (adjust if needed)
 const API_URL = "http://localhost:3000/api/tryon";
@@ -28,6 +37,213 @@ const API_URL = "http://localhost:3000/api/tryon";
 
 function setStatus(msg) {
   statusDiv.textContent = msg;
+}
+
+// --- Storage Utilities ---
+
+/**
+ * Save data to Chrome storage
+ * @param {string} key - Storage key
+ * @param {any} data - Data to save
+ * @returns {Promise<void>}
+ */
+async function saveToStorage(key, data) {
+  try {
+    await chrome.storage.local.set({ [key]: data });
+    console.log(`Saved to storage: ${key}`);
+  } catch (error) {
+    console.error(`Failed to save to storage ${key}:`, error);
+  }
+}
+
+/**
+ * Load data from Chrome storage
+ * @param {string} key - Storage key
+ * @returns {Promise<any>} - Stored data or null
+ */
+async function loadFromStorage(key) {
+  try {
+    const result = await chrome.storage.local.get([key]);
+    return result[key] || null;
+  } catch (error) {
+    console.error(`Failed to load from storage ${key}:`, error);
+    return null;
+  }
+}
+
+/**
+ * Clear specific storage key
+ * @param {string} key - Storage key to clear
+ * @returns {Promise<void>}
+ */
+async function clearStorageKey(key) {
+  try {
+    await chrome.storage.local.remove([key]);
+    console.log(`Cleared storage: ${key}`);
+  } catch (error) {
+    console.error(`Failed to clear storage ${key}:`, error);
+  }
+}
+
+/**
+ * Clear all extension storage
+ * @returns {Promise<void>}
+ */
+async function clearAllStorage() {
+  try {
+    await chrome.storage.local.clear();
+    console.log("Cleared all storage");
+  } catch (error) {
+    console.error("Failed to clear all storage:", error);
+  }
+}
+
+/**
+ * Save uploaded person image to storage
+ * @param {File} file - The uploaded file
+ * @returns {Promise<void>}
+ */
+async function saveUploadedImage(file) {
+  if (!file) return;
+
+  try {
+    const reader = new FileReader();
+    const dataUrl = await new Promise((resolve, reject) => {
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+    const imageData = {
+      dataUrl,
+      fileName: file.name,
+      fileSize: file.size,
+      fileType: file.type,
+      timestamp: Date.now(),
+    };
+
+    await saveToStorage(STORAGE_KEYS.UPLOADED_IMAGE, imageData);
+  } catch (error) {
+    console.error("Failed to save uploaded image:", error);
+  }
+}
+
+/**
+ * Save generated result image to storage
+ * @param {string} dataUrl - The generated image data URL
+ * @returns {Promise<void>}
+ */
+async function saveGeneratedImage(dataUrl) {
+  if (!dataUrl) return;
+
+  try {
+    const imageData = {
+      dataUrl,
+      timestamp: Date.now(),
+    };
+
+    await saveToStorage(STORAGE_KEYS.GENERATED_IMAGE, imageData);
+  } catch (error) {
+    console.error("Failed to save generated image:", error);
+  }
+}
+
+/**
+ * Restore uploaded image from storage
+ * @returns {Promise<boolean>} - True if image was restored
+ */
+async function restoreUploadedImage() {
+  try {
+    const imageData = await loadFromStorage(STORAGE_KEYS.UPLOADED_IMAGE);
+    if (!imageData || !imageData.dataUrl) return false;
+
+    // Set the preview image
+    personPreviewImage.src = imageData.dataUrl;
+    personPreviewContainer.classList.remove("hidden");
+
+    // Create a mock file object for the input
+    const response = await fetch(imageData.dataUrl);
+    const blob = await response.blob();
+    const file = new File([blob], imageData.fileName || "restored-image.jpg", {
+      type: imageData.fileType || "image/jpeg",
+    });
+
+    // Create a new FileList-like object
+    const dataTransfer = new DataTransfer();
+    dataTransfer.items.add(file);
+    personImageInput.files = dataTransfer.files;
+
+    console.log("Restored uploaded image from storage");
+    return true;
+  } catch (error) {
+    console.error("Failed to restore uploaded image:", error);
+    return false;
+  }
+}
+
+/**
+ * Restore generated image from storage
+ * @returns {Promise<boolean>} - True if image was restored
+ */
+async function restoreGeneratedImage() {
+  try {
+    const imageData = await loadFromStorage(STORAGE_KEYS.GENERATED_IMAGE);
+    if (!imageData || !imageData.dataUrl) return false;
+
+    // Set the result image
+    resultImage.src = imageData.dataUrl;
+    resultContainer.classList.remove("hidden");
+    enableDownload(true);
+
+    console.log("Restored generated image from storage");
+    return true;
+  } catch (error) {
+    console.error("Failed to restore generated image:", error);
+    return false;
+  }
+}
+
+/**
+ * Restore selected clothing URL from storage
+ * @returns {Promise<boolean>} - True if URL was restored
+ */
+async function restoreSelectedClothingUrl() {
+  try {
+    const url = await loadFromStorage(STORAGE_KEYS.SELECTED_CLOTHING_URL);
+    if (!url) return false;
+
+    selectedClothingUrl = url;
+    previewImage.src = url;
+
+    // Update UI to show selected clothing
+    galleryContainer.classList.add("hidden");
+    previewContainer.classList.remove("hidden");
+
+    console.log("Restored selected clothing URL from storage");
+    return true;
+  } catch (error) {
+    console.error("Failed to restore selected clothing URL:", error);
+    return false;
+  }
+}
+
+/**
+ * Save current session data
+ * @returns {Promise<void>}
+ */
+async function saveSessionData() {
+  try {
+    const sessionData = {
+      selectedClothingUrl,
+      hasUploadedImage: personImageInput.files.length > 0,
+      hasGeneratedImage: !!resultImage.src,
+      timestamp: Date.now(),
+    };
+
+    await saveToStorage(STORAGE_KEYS.LAST_SESSION_DATA, sessionData);
+  } catch (error) {
+    console.error("Failed to save session data:", error);
+  }
 }
 
 /**
@@ -153,18 +369,24 @@ function enableDownload(enable) {
 /**
  * Handles the user selecting a person image file.
  */
-function handlePersonImageSelection() {
+async function handlePersonImageSelection() {
   const file = personImageInput.files[0];
   if (file) {
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       personPreviewImage.src = e.target.result;
       personPreviewContainer.classList.remove("hidden");
+
+      // Save the uploaded image to storage
+      await saveUploadedImage(file);
     };
     reader.readAsDataURL(file);
   } else {
     personPreviewContainer.classList.add("hidden");
     personPreviewImage.src = "";
+
+    // Clear the uploaded image from storage
+    await clearStorageKey(STORAGE_KEYS.UPLOADED_IMAGE);
   }
   updateGenerateButtonState();
 }
@@ -234,26 +456,34 @@ function renderImageGallery(imageUrls) {
  * Handles the user clicking on an image in the gallery.
  * @param {string} url - The URL of the selected image.
  */
-function handleImageSelection(url) {
+async function handleImageSelection(url) {
   selectedClothingUrl = url;
   previewImage.src = url;
 
   // Update UI
   galleryContainer.classList.add("hidden");
   previewContainer.classList.remove("hidden");
+
+  // Save the selected clothing URL to storage
+  await saveToStorage(STORAGE_KEYS.SELECTED_CLOTHING_URL, url);
+
   updateGenerateButtonState();
 }
 
 /**
  * Handles the user clicking the "Change Selection" button.
  */
-function handleRemoveSelection() {
+async function handleRemoveSelection() {
   selectedClothingUrl = null;
   previewImage.src = "";
 
   // Update UI
   previewContainer.classList.add("hidden");
   galleryContainer.classList.remove("hidden");
+
+  // Clear the selected clothing URL from storage
+  await clearStorageKey(STORAGE_KEYS.SELECTED_CLOTHING_URL);
+
   updateGenerateButtonState();
 }
 
@@ -290,6 +520,61 @@ function handleDownloadImage() {
   } catch (error) {
     console.error("Download failed:", error);
     setStatus("❌ Échec du téléchargement. Veuillez réessayer.");
+  }
+}
+
+/**
+ * Handles clearing all stored data
+ */
+async function handleClearStorage() {
+  if (
+    !confirm(
+      "Êtes-vous sûr de vouloir effacer toutes les données sauvegardées ? Cette action ne peut pas être annulée."
+    )
+  ) {
+    return;
+  }
+
+  try {
+    // Clear all storage
+    await clearAllStorage();
+
+    // Reset UI state
+    selectedClothingUrl = null;
+    personImageInput.value = "";
+    personPreviewImage.src = "";
+    personPreviewContainer.classList.add("hidden");
+    previewImage.src = "";
+    previewContainer.classList.add("hidden");
+    resultImage.src = "";
+    resultContainer.classList.add("hidden");
+
+    // Reset gallery
+    galleryContainer.classList.remove("hidden");
+    galleryContainer.innerHTML = `
+      <div class="gallery-loading">
+        <div class="loading-spinner"></div>
+        <p class="loading-text">
+          Analyse de la page pour les articles de vêtements...
+        </p>
+      </div>
+    `;
+
+    // Update button states
+    updateGenerateButtonState();
+    enableDownload(false);
+
+    setStatus("🗑️ Toutes les données ont été effacées avec succès !");
+
+    // Clear status message after a few seconds
+    setTimeout(() => {
+      if (statusDiv.textContent.includes("effacées avec succès")) {
+        setStatus("");
+      }
+    }, 3000);
+  } catch (error) {
+    console.error("Failed to clear storage:", error);
+    setStatus("❌ Échec de l'effacement des données. Veuillez réessayer.");
   }
 }
 
@@ -370,6 +655,10 @@ async function handleFormSubmit(event) {
     const dataURL = `data:${mime};base64,${base64}`;
     resultImage.src = dataURL;
     resultContainer.classList.remove("hidden");
+
+    // Save the generated image to storage
+    await saveGeneratedImage(dataURL);
+
     setStatus("🎉 Incroyable ! Votre essayage virtuel est prêt !");
     enableDownload(true);
   } catch (error) {
@@ -406,17 +695,56 @@ async function handleFormSubmit(event) {
   }
 }
 
+/**
+ * Restore previous session data from storage
+ * @returns {Promise<void>}
+ */
+async function restorePreviousSession() {
+  try {
+    console.log("Restoring previous session...");
+
+    // Restore uploaded image
+    const uploadedRestored = await restoreUploadedImage();
+
+    // Restore selected clothing URL
+    const clothingRestored = await restoreSelectedClothingUrl();
+
+    // Restore generated image
+    const generatedRestored = await restoreGeneratedImage();
+
+    if (uploadedRestored || clothingRestored || generatedRestored) {
+      setStatus("📱 Session précédente restaurée avec succès !");
+
+      // Update button states after restoration
+      updateGenerateButtonState();
+
+      // Clear status message after a few seconds
+      setTimeout(() => {
+        if (statusDiv.textContent.includes("Session précédente restaurée")) {
+          setStatus("");
+        }
+      }, 3000);
+    }
+  } catch (error) {
+    console.error("Failed to restore previous session:", error);
+  }
+}
+
 // --- Event Listeners ---
 form.addEventListener("submit", handleFormSubmit);
 removeButton.addEventListener("click", handleRemoveSelection);
 personImageInput.addEventListener("change", handlePersonImageSelection);
 downloadButton.addEventListener("click", handleDownloadImage);
+clearStorageButton.addEventListener("click", handleClearStorage);
 
 // --- Initialization ---
 // When the popup loads, ask the content script for images
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
   updateGenerateButtonState(); // Initial state
   enableDownload(false);
+
+  // Restore saved data from previous session
+  await restorePreviousSession();
 
   // Find the current active tab
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
