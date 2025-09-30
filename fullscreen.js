@@ -407,7 +407,7 @@ function renderImageGallery(imageUrls) {
   const corsNote = document.createElement("div");
   corsNote.className = "cors-note";
   corsNote.innerHTML = `
-    <p style="font-size: 12px; color: #666; margin-bottom: 10px; padding: 8px; background: #f8f9fa; border-radius: 4px;">
+    <p style="font-size: 12px; color: #666; margin-bottom: 10px; padding: 8px; background: #f8f9fa; border-radius: 0.25rem;">
       <strong>Note:</strong> Some images may not display due to website restrictions. 
       You can still select them for virtual try-on.
     </p>
