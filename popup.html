@@ -16,6 +16,12 @@
           <p class="tagline">Essayage Virtuel Alimenté par IA</p>
         </div>
       </div>
+      <div class="header-actions">
+        <button id="cart-btn" class="cart-btn" title="Voir le panier">
+          <span class="cart-icon">🛒</span>
+          <span id="cart-count" class="cart-count hidden">0</span>
+        </button>
+      </div>
     </header>
 
     <!-- Main Content -->
@@ -23,11 +29,11 @@
       <form id="tryon-form">
         <div class="steps-container">
           <!-- Step 1: Upload Photo -->
-          <section class="step">
+          <section class="step step-upload">
             <div class="step-header">
               <div class="step-number">1</div>
               <div class="step-content">
-                <h2>Téléchargez Votre Photo</h2>
+                <h2 class="step-title">Téléchargez Votre Photo</h2>
                 <p>
                   Choisissez une photo claire de vous-même pour de meilleurs
                   résultats
@@ -35,55 +41,55 @@
               </div>
             </div>
 
-            <div class="upload-area">
-              <input
-                type="file"
-                id="person-image"
-                name="personImage"
-                accept="image/*"
-                required
-                class="file-input"
-              />
-              <label for="person-image" class="upload-label">
-                <div class="upload-icon">📸</div>
-                <div class="upload-text">
-                  <span class="upload-title"
-                    >Cliquez pour télécharger votre photo</span
-                  >
-                  <span class="upload-subtitle"
-                    >PNG, JPG, ou WebP jusqu'à 10MB</span
-                  >
+            <div class="step-body">
+              <div id="person-upload-container" class="upload-container">
+                <div class="upload-area">
+                  <input
+                    type="file"
+                    id="person-image"
+                    name="personImage"
+                    accept="image/*"
+                    required
+                    class="file-input"
+                  />
+                  <label for="person-image" class="upload-label">
+                    <div class="upload-icon">📸</div>
+                    <div class="upload-text">
+                      <span class="upload-title"
+                        >Cliquez pour télécharger votre photo</span
+                      >
+                      <span class="upload-subtitle"
+                        >PNG, JPG, ou WebP jusqu'à 10MB</span
+                      >
+                    </div>
+                  </label>
                 </div>
-              </label>
-            </div>
-
-            <div id="person-preview-container" class="hidden">
-              <div class="preview-header">
-                <h3>Votre Photo</h3>
-                <button
-                  type="button"
-                  class="change-photo-btn"
-                  onclick="document.getElementById('person-image').click()"
-                >
-                  Changer la Photo
-                </button>
               </div>
-              <div class="preview-image-container">
-                <img
-                  id="person-preview-image"
-                  src=""
-                  alt="Aperçu de Votre Photo"
-                />
+
+              <div
+                id="person-preview-container"
+                class="preview-container hidden"
+              >
+                <div class="preview-header">
+                  <h3>Votre Photo</h3>
+                </div>
+                <div class="preview-image-container">
+                  <img
+                    id="person-preview-image"
+                    src=""
+                    alt="Aperçu de Votre Photo"
+                  />
+                </div>
               </div>
             </div>
           </section>
 
           <!-- Step 2: Select Clothing -->
-          <section class="step">
+          <section class="step step-clothing">
             <div class="step-header">
               <div class="step-number">2</div>
               <div class="step-content">
-                <h2>Sélectionner un Article de Vêtement</h2>
+                <h2 class="step-title">Sélectionner un Article de Vêtement</h2>
                 <p>
                   Choisissez n'importe quel article de vêtement de cette page
                   web
@@ -91,33 +97,30 @@
               </div>
             </div>
 
-            <div id="clothing-preview-container" class="hidden">
-              <div class="preview-header">
-                <h3>Article Sélectionné</h3>
-                <button
-                  type="button"
-                  id="remove-selection-btn"
-                  class="change-selection-btn"
-                >
-                  <span class="btn-icon">↶</span>
-                  Changer la Sélection
-                </button>
+            <div class="step-body">
+              <div id="website-images-container" class="gallery-container">
+                <div class="gallery-loading">
+                  <div class="loading-spinner"></div>
+                  <p class="loading-text">
+                    Analyse de la page pour les articles de vêtements...
+                  </p>
+                </div>
               </div>
-              <div class="preview-image-container">
-                <img
-                  id="clothing-preview-image"
-                  src=""
-                  alt="Vêtement Sélectionné"
-                />
-              </div>
-            </div>
 
-            <div id="website-images-container" class="gallery-container">
-              <div class="gallery-loading">
-                <div class="loading-spinner"></div>
-                <p class="loading-text">
-                  Analyse de la page pour les articles de vêtements...
-                </p>
+              <div
+                id="clothing-preview-container"
+                class="preview-container hidden"
+              >
+                <div class="preview-header">
+                  <h3>Article Sélectionné</h3>
+                </div>
+                <div class="preview-image-container">
+                  <img
+                    id="clothing-preview-image"
+                    src=""
+                    alt="Vêtement Sélectionné"
+                  />
+                </div>
               </div>
             </div>
           </section>
@@ -152,9 +155,25 @@
           />
         </div>
         <div class="result-actions">
+          <button
+            type="button"
+            id="product-details-btn"
+            class="product-details-btn"
+          >
+            <span class="btn-icon">ℹ️</span>
+            <span class="btn-text">Détails</span>
+          </button>
+          <button type="button" id="buy-now-btn" class="buy-now-btn">
+            <span class="btn-icon">🛒</span>
+            <span class="btn-text">Buy Now</span>
+          </button>
+          <button type="button" id="add-to-cart-btn" class="add-to-cart-btn">
+            <span class="btn-icon">➕</span>
+            <span class="btn-text">Add to Cart</span>
+          </button>
           <button type="button" id="download-btn" class="download-btn">
             <span class="btn-icon">💾</span>
-            <span class="btn-text">Télécharger l'Image</span>
+            <span class="btn-text">Télécharger</span>
           </button>
           <button
             type="button"
@@ -167,6 +186,72 @@
         </div>
       </div>
     </main>
+
+    <!-- Cart Modal -->
+    <div id="cart-modal" class="modal hidden">
+      <div class="modal-overlay"></div>
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Votre Panier</h3>
+          <button
+            id="close-cart-modal"
+            class="close-btn"
+            aria-label="Fermer le panier"
+          >
+            <span>✕</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div id="cart-items-container" class="cart-items-container">
+            <div class="empty-cart">
+              <div class="empty-cart-icon">🛒</div>
+              <p>Votre panier est vide</p>
+              <small>Ajoutez des articles pour commencer vos achats</small>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <div class="cart-summary">
+            <div class="cart-total">
+              <span>Total: </span>
+              <span id="cart-total-price">0,00 €</span>
+            </div>
+          </div>
+          <div class="cart-actions">
+            <button id="clear-cart-btn" class="clear-cart-btn">
+              <span class="btn-icon">🗑️</span>
+              <span class="btn-text">Vider le panier</span>
+            </button>
+            <button id="checkout-btn" class="checkout-btn">
+              <span class="btn-icon">💳</span>
+              <span class="btn-text">Commander</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Product Details Modal -->
+    <div id="product-modal" class="modal hidden">
+      <div class="modal-overlay"></div>
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Détails du Produit</h3>
+          <button
+            id="close-product-modal"
+            class="close-btn"
+            aria-label="Fermer les détails"
+          >
+            <span>✕</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div id="product-details-container" class="product-details-container">
+            <!-- Product details will be populated here -->
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- Footer -->
     <footer class="footer">

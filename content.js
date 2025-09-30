@@ -29,8 +29,11 @@
   function collectFromImages() {
     const urls = [];
 
-    // <img>
+    // <img> - collect all images
     document.querySelectorAll("img").forEach((img) => {
+      // Skip very small images (likely icons/sprites)
+      if (img.width < 50 && img.height < 50) return;
+
       // Prefer currentSrc if available, then src
       const primary = img.currentSrc || img.src;
       if (primary) urls.push(primary);
@@ -45,6 +48,12 @@
       if (source.type && !source.type.startsWith("image/")) return;
       const srcsetUrls = parseSrcset(source.srcset);
       urls.push(...srcsetUrls);
+    });
+
+    // <video> poster images
+    document.querySelectorAll("video[poster]").forEach((video) => {
+      const poster = video.getAttribute("poster");
+      if (poster) urls.push(poster);
     });
 
     return urls;
@@ -98,7 +107,7 @@
     const urls = [];
     document
       .querySelectorAll(
-        'a[href*=".png"], a[href*=".jpg"], a[href*=".jpeg"], a[href*=".webp"], a[href*=".gif"]'
+        'a[href*=".png"], a[href*=".jpg"], a[href*=".jpeg"], a[href*=".webp"], a[href*=".gif"], a[href*=".svg"]'
       )
       .forEach((a) => {
         const abs = toAbsolute(a.getAttribute("href"));
@@ -107,26 +116,65 @@
     return urls;
   }
 
+  // Collect from data attributes that might contain image URLs
+  function collectFromDataAttributes() {
+    const urls = [];
+    document
+      .querySelectorAll("[data-src], [data-image], [data-img], [data-url]")
+      .forEach((el) => {
+        const src =
+          el.getAttribute("data-src") ||
+          el.getAttribute("data-image") ||
+          el.getAttribute("data-img") ||
+          el.getAttribute("data-url");
+        if (src) {
+          const abs = toAbsolute(src);
+          if (abs) urls.push(abs);
+        }
+      });
+    return urls;
+  }
+
   function filterCandidates(urls) {
-    // Exclude data URLs and very small icons, and obvious sprites if possible
+    // More inclusive filtering to capture all possible images
     const out = urls
       .filter((u) => !!u)
       .filter((u) => !u.startsWith("data:")) // prefer fetchable URLs
-      .filter((u) => /\.(png|jpe?g|webp|gif)(\?|#|$)/i.test(u)); // basic image filter
+      .filter((u) => {
+        // Accept images with common extensions or no extension (API endpoints)
+        return (
+          /\.(png|jpe?g|webp|gif|svg|bmp|tiff?)(\?|#|$)/i.test(u) ||
+          /\/images?\//i.test(u) ||
+          /\/media\//i.test(u) ||
+          /\/assets?\//i.test(u) ||
+          /\/uploads?\//i.test(u)
+        );
+      });
 
-    // Optional: prioritize larger images by pushing common size hints up
-    // (basic heuristic; you can skip or enhance)
+    // Prioritize larger images and product images
     const score = (u) => {
       let s = 0;
-      if (/(\b|\D)(1080|1200|1440|1600|1920)(\b|\D)/.test(u)) s += 3;
-      if (/(large|xlarge|xl|xxl|hero|product|detail)/i.test(u)) s += 2;
-      if (/(thumb|small|tiny|icon|sprite)/i.test(u)) s -= 2;
+      // High resolution indicators
+      if (/(\b|\D)(1080|1200|1440|1600|1920|2048|2560)(\b|\D)/.test(u)) s += 4;
+      // Product/clothing related keywords
+      if (
+        /(product|item|clothing|apparel|fashion|garment|dress|shirt|pants|shoes)/i.test(
+          u
+        )
+      )
+        s += 3;
+      // Size indicators
+      if (/(large|xlarge|xl|xxl|hero|detail|full|original)/i.test(u)) s += 2;
+      // Quality indicators
+      if (/(hd|high|quality|premium)/i.test(u)) s += 2;
+      // Penalize small/icon images
+      if (/(thumb|small|tiny|icon|sprite|avatar|profile)/i.test(u)) s -= 1;
       return s;
     };
 
     return unique(out)
       .sort((a, b) => score(b) - score(a))
-      .slice(0, 100); // cap the list
+      .slice(0, 150); // Increased limit to show more images
   }
 
   function collectImageUrls() {
@@ -135,6 +183,7 @@
       ...collectFromBackgrounds(),
       ...collectFromMeta(),
       ...collectFromLinks(),
+      ...collectFromDataAttributes(),
     ];
     return filterCandidates(urls);
   }

@@ -1,10 +1,11 @@
-// popup.js
+// fullscreen.js - Fullscreen version of HIMYT TryON
+
+// Import all functionality from popup.js
+// This file extends the popup functionality for fullscreen mode
 
 // --- Global State ---
 let selectedClothingUrl = null;
 let inFlightController = null;
-let cartItems = [];
-let currentProductInfo = null;
 
 // --- Storage Keys ---
 const STORAGE_KEYS = {
@@ -12,8 +13,6 @@ const STORAGE_KEYS = {
   GENERATED_IMAGE: "himyt_tryon_generated_image",
   SELECTED_CLOTHING_URL: "himyt_tryon_selected_clothing_url",
   LAST_SESSION_DATA: "himyt_tryon_last_session",
-  CART_ITEMS: "himyt_tryon_cart_items",
-  PRODUCT_INFO: "himyt_tryon_product_info",
 };
 
 // --- DOM Elements ---
@@ -26,29 +25,15 @@ const personPreviewImage = document.getElementById("person-preview-image");
 const galleryContainer = document.getElementById("website-images-container");
 const previewContainer = document.getElementById("clothing-preview-container");
 const previewImage = document.getElementById("clothing-preview-image");
-// Remove button reference since we're removing the button
+const removeButton = document.getElementById("remove-selection-btn");
 const generateButton = document.getElementById("generate-btn");
 const statusDiv = document.getElementById("status");
 const resultContainer = document.getElementById("result-container");
 const resultImage = document.getElementById("result-image");
 const downloadButton = document.getElementById("download-btn");
-const clearStorageButton = document.getElementById("clear-storage-btn");
 const buyNowButton = document.getElementById("buy-now-btn");
 const addToCartButton = document.getElementById("add-to-cart-btn");
-const cartButton = document.getElementById("cart-btn");
-const cartCount = document.getElementById("cart-count");
-const cartModal = document.getElementById("cart-modal");
-const closeCartModal = document.getElementById("close-cart-modal");
-const cartItemsContainer = document.getElementById("cart-items-container");
-const cartTotalPrice = document.getElementById("cart-total-price");
-const clearCartButton = document.getElementById("clear-cart-btn");
-const checkoutButton = document.getElementById("checkout-btn");
-const productModal = document.getElementById("product-modal");
-const closeProductModal = document.getElementById("close-product-modal");
-const productDetailsContainer = document.getElementById(
-  "product-details-container"
-);
-const productDetailsButton = document.getElementById("product-details-btn");
+const minimizeButton = document.getElementById("minimize-btn");
 
 // Backend URL (adjust if needed)
 const API_URL = "https://try-on-server-six.vercel.app/api/tryon";
@@ -180,8 +165,6 @@ async function restoreUploadedImage() {
     // Set the preview image
     personPreviewImage.src = imageData.dataUrl;
     personPreviewContainer.classList.remove("hidden");
-    // Hide upload container when image is restored
-    document.getElementById("person-upload-container").classList.add("hidden");
 
     // Create a mock file object for the input
     const response = await fetch(imageData.dataUrl);
@@ -372,16 +355,12 @@ function setBusy(isBusy) {
   const btnIcon = generateButton.querySelector(".btn-icon");
 
   if (isBusy) {
-    generateButton.classList.add("button-loading");
     btnLoading.classList.remove("hidden");
-    btnLoading.classList.add("show");
-    btnText.textContent = "Génération...";
+    btnText.textContent = "Generating...";
     btnIcon.textContent = "⏳";
   } else {
-    generateButton.classList.remove("button-loading");
     btnLoading.classList.add("hidden");
-    btnLoading.classList.remove("show");
-    btnText.textContent = "Générer l'Essayage Virtuel";
+    btnText.textContent = "Generate Virtual Try-On";
     btnIcon.textContent = "✨";
   }
 }
@@ -402,50 +381,18 @@ async function handlePersonImageSelection() {
     reader.onload = async (e) => {
       personPreviewImage.src = e.target.result;
       personPreviewContainer.classList.remove("hidden");
-      // Hide upload container when preview is shown
-      document
-        .getElementById("person-upload-container")
-        .classList.add("hidden");
 
       // Save the uploaded image to storage
       await saveUploadedImage(file);
-
-      // Update layout state
-      updateGenerateButtonState();
     };
     reader.readAsDataURL(file);
   } else {
     personPreviewContainer.classList.add("hidden");
     personPreviewImage.src = "";
-    // Show upload container when no file is selected
-    document
-      .getElementById("person-upload-container")
-      .classList.remove("hidden");
 
     // Clear the uploaded image from storage
     await clearStorageKey(STORAGE_KEYS.UPLOADED_IMAGE);
-
-    // Update layout state
-    updateGenerateButtonState();
   }
-}
-
-/**
- * Handles clicking on the person preview to change selection
- */
-async function handlePersonPreviewClick() {
-  // Reset selection
-  personImageInput.value = "";
-  personPreviewImage.src = "";
-
-  // Update UI
-  personPreviewContainer.classList.add("hidden");
-  document.getElementById("person-upload-container").classList.remove("hidden");
-
-  // Clear the uploaded image from storage
-  await clearStorageKey(STORAGE_KEYS.UPLOADED_IMAGE);
-
-  // Update layout state
   updateGenerateButtonState();
 }
 
@@ -460,35 +407,48 @@ function renderImageGallery(imageUrls) {
     galleryContainer.innerHTML = `
       <div class="gallery-loading">
         <div style="font-size: 2rem; margin-bottom: 1rem;">🔍</div>
-        <p class="loading-text">Aucune image appropriée trouvée sur cette page.</p>
+        <p class="loading-text">No suitable images found on this page.</p>
         <p style="font-size: 0.75rem; color: #666; margin-top: 0.5rem;">
-          Essayez de naviguer sur un site de vêtements ou de mode pour de meilleurs résultats.
+          Try navigating to a clothing or fashion website for better results.
         </p>
       </div>
     `;
     return;
   }
 
+  // Add a note about potential CORS issues
+  const corsNote = document.createElement("div");
+  corsNote.className = "cors-note";
+  corsNote.innerHTML = `
+    <p style="font-size: 12px; color: #666; margin-bottom: 10px; padding: 8px; background: #f8f9fa; border-radius: 4px;">
+      <strong>Note:</strong> Some images may not display due to website restrictions. 
+      You can still select them for virtual try-on.
+    </p>
+  `;
+  galleryContainer.appendChild(corsNote);
+
   imageUrls.forEach((url) => {
     const img = document.createElement("img");
     img.src = url;
     img.loading = "lazy";
     img.decoding = "async";
-    img.title = "Cliquez pour sélectionner cet article";
+    img.title = "Click to select this item";
     img.crossOrigin = "anonymous"; // Try to enable CORS for the image
 
     // Handle image load errors (including CORS issues)
     img.addEventListener("error", (e) => {
       console.warn(`Failed to load image: ${url}`, e);
-      // Add error class instead of inline styles
-      img.classList.add("image-error");
-      img.title = "L'image peut ne pas être accessible";
+      // Add a placeholder or error indicator
+      img.style.border = "2px dashed #ff6b6b";
+      img.style.opacity = "0.7";
+      img.title = "Image may not be accessible due to website restrictions";
     });
 
     img.addEventListener("load", () => {
-      // Remove error class on successful load
-      img.classList.remove("image-error");
-      img.title = "Cliquez pour sélectionner cet article";
+      // Remove any error styling if the image loads successfully
+      img.style.border = "";
+      img.style.opacity = "";
+      img.title = "Click to select this item";
     });
 
     img.addEventListener("click", () => handleImageSelection(url));
@@ -511,15 +471,13 @@ async function handleImageSelection(url) {
   // Save the selected clothing URL to storage
   await saveToStorage(STORAGE_KEYS.SELECTED_CLOTHING_URL, url);
 
-  // Update layout state
   updateGenerateButtonState();
 }
 
 /**
- * Handles clicking on the clothing preview to change selection
+ * Handles the user clicking the "Change Selection" button.
  */
-async function handleClothingPreviewClick() {
-  // Reset selection
+async function handleRemoveSelection() {
   selectedClothingUrl = null;
   previewImage.src = "";
 
@@ -530,7 +488,6 @@ async function handleClothingPreviewClick() {
   // Clear the selected clothing URL from storage
   await clearStorageKey(STORAGE_KEYS.SELECTED_CLOTHING_URL);
 
-  // Update layout state
   updateGenerateButtonState();
 }
 
@@ -543,22 +500,6 @@ function updateGenerateButtonState() {
   const canGenerate = personPhotoSelected && clothingSelected;
   generateButton.disabled = !canGenerate;
   enableDownload(!!resultImage.src);
-
-  // Update layout based on selection state
-  updateLayoutState(personPhotoSelected, clothingSelected);
-}
-
-/**
- * Update layout state based on image selections
- */
-function updateLayoutState(personSelected, clothingSelected) {
-  const stepsContainer = document.querySelector(".steps-container");
-
-  if (personSelected && clothingSelected) {
-    stepsContainer.classList.add("both-selected");
-  } else {
-    stepsContainer.classList.remove("both-selected");
-  }
 }
 
 /**
@@ -566,7 +507,7 @@ function updateLayoutState(personSelected, clothingSelected) {
  */
 function handleDownloadImage() {
   if (!resultImage.src) {
-    setStatus("Aucune image à télécharger.");
+    setStatus("No image to download.");
     return;
   }
 
@@ -577,12 +518,10 @@ function handleDownloadImage() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    setStatus(
-      "💾 Image téléchargée avec succès ! Vérifiez votre dossier de téléchargements."
-    );
+    setStatus("💾 Image downloaded successfully! Check your downloads folder.");
   } catch (error) {
     console.error("Download failed:", error);
-    setStatus("❌ Échec du téléchargement. Veuillez réessayer.");
+    setStatus("❌ Download failed. Please try again.");
   }
 }
 
@@ -591,444 +530,52 @@ function handleDownloadImage() {
  */
 function handleBuyNow() {
   if (!selectedClothingUrl) {
-    setStatus("📸 Veuillez d'abord sélectionner un article de vêtement.");
+    setStatus("📸 Please first select a clothing item.");
     return;
   }
 
-  // Extract product information and proceed to checkout
-  const productInfo = extractProductInfo();
-
-  setStatus("🛒 Redirection vers la page d'achat...");
+  // In a real application, this would redirect to the product page or checkout
+  setStatus("🛒 Redirecting to purchase page...");
 
   // Simulate opening the product page in a new tab
   setTimeout(() => {
-    setStatus("🎉 Redirection vers la page d'achat réussie !");
+    setStatus("🎉 Successfully redirected to purchase page!");
     // In a real implementation, you would:
-    // window.open(productInfo.url || selectedClothingUrl, '_blank');
-    // or redirect to a checkout page with the product info
+    // window.open(selectedClothingUrl, '_blank');
+    // or redirect to a checkout page
   }, 1000);
 }
 
 /**
  * Handles the Add to Cart button click
  */
-async function handleAddToCart() {
+function handleAddToCart() {
   if (!selectedClothingUrl) {
-    setStatus("📸 Veuillez d'abord sélectionner un article de vêtement.");
+    setStatus("📸 Please first select a clothing item.");
     return;
   }
 
-  try {
-    // Extract product information
-    const productInfo = extractProductInfo();
+  setStatus("➕ Item added to cart successfully!");
 
-    // Add to cart
-    await addToCart(productInfo);
-
-    // Update cart count
-    updateCartCount();
-
-    // Show success message
-    setStatus("➕ Article ajouté au panier avec succès !");
-
-    // Add visual feedback with enhanced animations
-    addToCartButton.classList.add("button-press");
-    addToCartButton.classList.add("button-success");
-
-    setTimeout(() => {
-      addToCartButton.classList.remove("button-press");
-      addToCartButton.classList.remove("button-success");
-    }, 600);
-
-    setTimeout(() => {
-      setStatus("🛒 L'article a été ajouté à votre panier.");
-    }, 1500);
-  } catch (error) {
-    console.error("Failed to add to cart:", error);
-    setStatus("❌ Erreur lors de l'ajout au panier. Veuillez réessayer.");
-
-    // Add error visual feedback
-    addToCartButton.classList.add("button-error");
-    setTimeout(() => {
-      addToCartButton.classList.remove("button-error");
-    }, 500);
-  }
-}
-
-/**
- * Extract product information from the current page
- */
-function extractProductInfo() {
-  const productInfo = {
-    id: generateProductId(),
-    name: extractProductName(),
-    price: extractProductPrice(),
-    image: selectedClothingUrl,
-    url: window.location.href,
-    description: extractProductDescription(),
-    timestamp: Date.now(),
-  };
-
-  currentProductInfo = productInfo;
-  return productInfo;
-}
-
-/**
- * Generate a unique product ID
- */
-function generateProductId() {
-  return `product_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-}
-
-/**
- * Extract product name from the page
- */
-function extractProductName() {
-  // Try to find product name from common selectors
-  const selectors = [
-    'h1[data-testid*="product"]',
-    ".product-title",
-    ".product-name",
-    "h1",
-    '[data-testid*="title"]',
-    ".title",
-  ];
-
-  for (const selector of selectors) {
-    const element = document.querySelector(selector);
-    if (element && element.textContent.trim()) {
-      return element.textContent.trim();
-    }
-  }
-
-  return "Article de vêtement";
-}
-
-/**
- * Extract product price from the page
- */
-function extractProductPrice() {
-  const selectors = [
-    '[data-testid*="price"]',
-    ".price",
-    ".product-price",
-    '[class*="price"]',
-    '[data-testid*="cost"]',
-  ];
-
-  for (const selector of selectors) {
-    const element = document.querySelector(selector);
-    if (element && element.textContent.trim()) {
-      const priceText = element.textContent.trim();
-      const priceMatch = priceText.match(/[\d,]+\.?\d*/);
-      if (priceMatch) {
-        return parseFloat(priceMatch[0].replace(",", ""));
-      }
-    }
-  }
-
-  return 29.99; // Default price
-}
-
-/**
- * Extract product description from the page
- */
-function extractProductDescription() {
-  const selectors = [
-    ".product-description",
-    ".description",
-    '[data-testid*="description"]',
-    ".product-details",
-  ];
-
-  for (const selector of selectors) {
-    const element = document.querySelector(selector);
-    if (element && element.textContent.trim()) {
-      return element.textContent.trim().substring(0, 200) + "...";
-    }
-  }
-
-  return "Article de vêtement sélectionné pour l'essayage virtuel.";
-}
-
-/**
- * Add product to cart
- */
-async function addToCart(productInfo) {
-  // Check if item already exists in cart
-  const existingItemIndex = cartItems.findIndex(
-    (item) => item.id === productInfo.id
-  );
-
-  if (existingItemIndex !== -1) {
-    // Increase quantity if item already exists
-    cartItems[existingItemIndex].quantity += 1;
-  } else {
-    // Add new item to cart
-    cartItems.push({
-      ...productInfo,
-      quantity: 1,
-    });
-  }
-
-  // Save to storage
-  await saveToStorage(STORAGE_KEYS.CART_ITEMS, cartItems);
-}
-
-/**
- * Remove item from cart
- */
-async function removeFromCart(productId) {
-  cartItems = cartItems.filter((item) => item.id !== productId);
-  await saveToStorage(STORAGE_KEYS.CART_ITEMS, cartItems);
-  updateCartCount();
-  renderCartItems();
-}
-
-/**
- * Update item quantity in cart
- */
-async function updateCartItemQuantity(productId, newQuantity) {
-  const item = cartItems.find((item) => item.id === productId);
-  if (item) {
-    if (newQuantity <= 0) {
-      await removeFromCart(productId);
-    } else {
-      item.quantity = newQuantity;
-      await saveToStorage(STORAGE_KEYS.CART_ITEMS, cartItems);
-      renderCartItems();
-    }
-  }
-}
-
-/**
- * Update cart count display
- */
-function updateCartCount() {
-  const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
-
-  if (totalItems > 0) {
-    cartCount.textContent = totalItems;
-    cartCount.classList.remove("hidden");
-  } else {
-    cartCount.classList.add("hidden");
-  }
-}
-
-/**
- * Calculate cart total
- */
-function calculateCartTotal() {
-  return cartItems.reduce(
-    (total, item) => total + item.price * item.quantity,
-    0
-  );
-}
-
-/**
- * Render cart items in the modal
- */
-function renderCartItems() {
-  if (cartItems.length === 0) {
-    cartItemsContainer.innerHTML = `
-      <div class="empty-cart">
-        <div class="empty-cart-icon">🛒</div>
-        <p>Votre panier est vide</p>
-        <small>Ajoutez des articles pour commencer vos achats</small>
-      </div>
-    `;
-    cartTotalPrice.textContent = "0,00 €";
-    return;
-  }
-
-  cartItemsContainer.innerHTML = cartItems
-    .map(
-      (item) => `
-    <div class="cart-item" data-product-id="${item.id}">
-      <img src="${item.image}" alt="${
-        item.name
-      }" class="cart-item-image" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yMCAyMEg0MFY0MEgyMFYyMFoiIGZpbGw9IiNEMUQ1REIiLz4KPC9zdmc+'">
-      <div class="cart-item-details">
-        <div class="cart-item-name">${item.name}</div>
-        <div class="cart-item-price">${item.price.toFixed(2)} €</div>
-      </div>
-      <div class="cart-item-actions">
-        <div class="quantity-controls">
-          <button class="quantity-btn" onclick="updateCartItemQuantity('${
-            item.id
-          }', ${item.quantity - 1})">-</button>
-          <span class="quantity-display">${item.quantity}</span>
-          <button class="quantity-btn" onclick="updateCartItemQuantity('${
-            item.id
-          }', ${item.quantity + 1})">+</button>
-        </div>
-        <button class="remove-item-btn" onclick="removeFromCart('${
-          item.id
-        }')" title="Supprimer l'article">
-          🗑️
-        </button>
-      </div>
-    </div>
-  `
-    )
-    .join("");
-
-  cartTotalPrice.textContent = `${calculateCartTotal().toFixed(2)} €`;
-}
-
-/**
- * Load cart items from storage
- */
-async function loadCartItems() {
-  try {
-    const storedItems = await loadFromStorage(STORAGE_KEYS.CART_ITEMS);
-    cartItems = storedItems || [];
-    updateCartCount();
-  } catch (error) {
-    console.error("Failed to load cart items:", error);
-    cartItems = [];
-  }
-}
-
-/**
- * Clear all cart items
- */
-async function clearCart() {
-  cartItems = [];
-  await saveToStorage(STORAGE_KEYS.CART_ITEMS, cartItems);
-  updateCartCount();
-  renderCartItems();
-  setStatus("🗑️ Panier vidé avec succès !");
-}
-
-/**
- * Handle cart modal open/close
- */
-function openCartModal() {
-  cartModal.classList.remove("hidden");
-  renderCartItems();
-
-  // Add bounce animation to cart button
-  cartButton.classList.add("button-bounce");
+  // In a real application, this would add the item to a shopping cart
+  // You could store cart items in Chrome storage or send to a backend
   setTimeout(() => {
-    cartButton.classList.remove("button-bounce");
-  }, 600);
-}
-
-function closeCartModalHandler() {
-  cartModal.classList.add("hidden");
-}
-
-/**
- * Handle checkout process
- */
-async function handleCheckout() {
-  if (cartItems.length === 0) {
-    setStatus("🛒 Votre panier est vide. Ajoutez des articles pour continuer.");
-    return;
-  }
-
-  setStatus("💳 Redirection vers le processus de commande...");
-
-  // In a real implementation, you would redirect to a checkout page
-  // with the cart items data
-  setTimeout(() => {
-    setStatus("🎉 Redirection vers la commande réussie !");
-    closeCartModalHandler();
+    setStatus("🛒 The item has been added to your cart.");
   }, 1500);
 }
 
 /**
- * Show product details modal
+ * Handles minimizing the fullscreen view
  */
-function showProductDetails(productInfo) {
-  productDetailsContainer.innerHTML = `
-    <img src="${productInfo.image}" alt="${
-    productInfo.name
-  }" class="product-image" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik02Ni42NyA2Ni42N0gxMzMuMzNWMTMzLjMzSDY2LjY3VjY2LjY3WiIgZmlsbD0iI0QxRDVEQiIvPgo8L3N2Zz4='">
-    <div class="product-info">
-      <h4 class="product-name">${productInfo.name}</h4>
-      <p class="product-description">${productInfo.description}</p>
-      <div class="product-price">${productInfo.price.toFixed(2)} €</div>
-    </div>
-    <div class="product-actions">
-      <button class="buy-now-btn" onclick="handleBuyNow(); closeProductModalHandler();">
-        <span class="btn-icon">🛒</span>
-        <span class="btn-text">Acheter maintenant</span>
-      </button>
-      <button class="add-to-cart-btn" onclick="handleAddToCart(); closeProductModalHandler();">
-        <span class="btn-icon">➕</span>
-        <span class="btn-text">Ajouter au panier</span>
-      </button>
-    </div>
-  `;
+function handleMinimize() {
+  // In a real implementation, this would switch back to popup mode
+  setStatus("🔄 Switching to popup view...");
 
-  productModal.classList.remove("hidden");
-}
-
-function closeProductModalHandler() {
-  productModal.classList.add("hidden");
-}
-
-/**
- * Handles clearing all stored data
- */
-async function handleClearStorage() {
-  if (
-    !confirm(
-      "Êtes-vous sûr de vouloir effacer toutes les données sauvegardées ? Cette action ne peut pas être annulée."
-    )
-  ) {
-    return;
-  }
-
-  try {
-    // Clear all storage
-    await clearAllStorage();
-
-    // Reset UI state
-    selectedClothingUrl = null;
-    cartItems = [];
-    currentProductInfo = null;
-    personImageInput.value = "";
-    personPreviewImage.src = "";
-    personPreviewContainer.classList.add("hidden");
-    previewImage.src = "";
-    previewContainer.classList.add("hidden");
-    resultImage.src = "";
-    resultContainer.classList.add("hidden");
-
-    // Reset cart
-    updateCartCount();
-    renderCartItems();
-
-    // Reset gallery
-    galleryContainer.classList.remove("hidden");
-    galleryContainer.innerHTML = `
-      <div class="gallery-loading">
-        <div class="loading-spinner"></div>
-        <p class="loading-text">
-          Analyse de la page pour les articles de vêtements...
-        </p>
-      </div>
-    `;
-
-    // Update button states
-    updateGenerateButtonState();
-    enableDownload(false);
-
-    setStatus("🗑️ Toutes les données ont été effacées avec succès !");
-
-    // Clear status message after a few seconds
-    setTimeout(() => {
-      if (statusDiv.textContent.includes("effacées avec succès")) {
-        setStatus("");
-      }
-    }, 3000);
-  } catch (error) {
-    console.error("Failed to clear storage:", error);
-    setStatus("❌ Échec de l'effacement des données. Veuillez réessayer.");
-  }
+  setTimeout(() => {
+    // This would typically close the fullscreen window and open the popup
+    // For now, we'll just show a message
+    setStatus("📱 Switched to popup view successfully!");
+  }, 500);
 }
 
 /**
@@ -1039,7 +586,7 @@ async function handleFormSubmit(event) {
 
   if (!personImageInput.files[0] || !selectedClothingUrl) {
     setStatus(
-      "📸 Veuillez télécharger votre photo et sélectionner un article de vêtement pour continuer."
+      "📸 Please upload your photo and select a clothing item to continue."
     );
     return;
   }
@@ -1050,7 +597,7 @@ async function handleFormSubmit(event) {
   }
   inFlightController = new AbortController();
 
-  setStatus("🎯 Préparation de votre expérience d'essayage virtuel...");
+  setStatus("🎯 Preparing your virtual try-on experience...");
   resultContainer.classList.add("hidden");
   resultImage.src = "";
   enableDownload(false);
@@ -1058,7 +605,7 @@ async function handleFormSubmit(event) {
 
   try {
     // Step 1: Fetch the selected website image with CORS handling
-    setStatus("📥 Récupération de l'image de vêtement depuis le site web...");
+    setStatus("📥 Fetching clothing image from website...");
     const clothingBlob = await fetchImageWithCorsHandling(
       selectedClothingUrl,
       inFlightController.signal
@@ -1071,7 +618,7 @@ async function handleFormSubmit(event) {
     formData.append("itemImage", clothingBlob, "clothing-item.jpg");
 
     // Step 3: Send to the backend (expects JSON response)
-    setStatus("💫 Laissez-nous faire la magie... Cela peut prendre un moment.");
+    setStatus("💫 Let us work our magic... This may take a moment.");
 
     const apiResponse = await fetch(API_URL, {
       method: "POST",
@@ -1094,7 +641,7 @@ async function handleFormSubmit(event) {
       // Standardized backend error
       const msg =
         (data.error && (data.error.message || data.error.code)) ||
-        "Échec de la génération de l'image.";
+        "Failed to generate image.";
       throw new Error(msg);
     }
 
@@ -1102,7 +649,7 @@ async function handleFormSubmit(event) {
     const mime = data.output?.image?.mimeType || "image/png";
     const base64 = data.output?.image?.base64;
     if (!base64) {
-      throw new Error("Aucune image trouvée dans la réponse.");
+      throw new Error("No image found in response.");
     }
 
     const dataURL = `data:${mime};base64,${base64}`;
@@ -1112,17 +659,11 @@ async function handleFormSubmit(event) {
     // Save the generated image to storage
     await saveGeneratedImage(dataURL);
 
-    setStatus("🎉 Incroyable ! Votre essayage virtuel est prêt !");
+    setStatus("🎉 Amazing! Your virtual try-on is ready!");
     enableDownload(true);
-
-    // Add success animation to generate button
-    generateButton.classList.add("button-success");
-    setTimeout(() => {
-      generateButton.classList.remove("button-success");
-    }, 600);
   } catch (error) {
     if (error?.name === "AbortError") {
-      setStatus("Demande annulée.");
+      setStatus("Request cancelled.");
     } else {
       console.error("Error:", error);
 
@@ -1132,25 +673,19 @@ async function handleFormSubmit(event) {
         error?.message?.includes("fetch strategies failed")
       ) {
         setStatus(
-          "🚫 Impossible d'accéder à l'image en raison des restrictions du site web. Essayez de sélectionner une image différente ou naviguez sur un autre site web."
+          "🚫 Unable to access image due to website restrictions. Try selecting a different image or navigate to another website."
         );
       } else if (error?.message?.includes("Failed to fetch")) {
         setStatus(
-          "🌐 Erreur réseau : Impossible de récupérer l'image sélectionnée. Veuillez vérifier votre connexion internet et réessayer."
+          "🌐 Network error: Unable to fetch the selected image. Please check your internet connection and try again."
         );
       } else {
         setStatus(
           `❌ ${
             error?.message ||
-            "Échec de la génération de votre essayage virtuel. Veuillez réessayer."
+            "Failed to generate your virtual try-on. Please try again."
           }`
         );
-
-        // Add error animation to generate button
-        generateButton.classList.add("button-error");
-        setTimeout(() => {
-          generateButton.classList.remove("button-error");
-        }, 500);
       }
     }
   } finally {
@@ -1178,14 +713,14 @@ async function restorePreviousSession() {
     const generatedRestored = await restoreGeneratedImage();
 
     if (uploadedRestored || clothingRestored || generatedRestored) {
-      setStatus("📱 Session précédente restaurée avec succès !");
+      setStatus("📱 Previous session restored successfully!");
 
       // Update button states after restoration
       updateGenerateButtonState();
 
       // Clear status message after a few seconds
       setTimeout(() => {
-        if (statusDiv.textContent.includes("Session précédente restaurée")) {
+        if (statusDiv.textContent.includes("Previous session restored")) {
           setStatus("");
         }
       }, 3000);
@@ -1197,77 +732,18 @@ async function restorePreviousSession() {
 
 // --- Event Listeners ---
 form.addEventListener("submit", handleFormSubmit);
+removeButton.addEventListener("click", handleRemoveSelection);
 personImageInput.addEventListener("change", handlePersonImageSelection);
 downloadButton.addEventListener("click", handleDownloadImage);
-clearStorageButton.addEventListener("click", handleClearStorage);
 buyNowButton.addEventListener("click", handleBuyNow);
 addToCartButton.addEventListener("click", handleAddToCart);
-
-// Cart event listeners
-cartButton.addEventListener("click", openCartModal);
-closeCartModal.addEventListener("click", closeCartModalHandler);
-clearCartButton.addEventListener("click", clearCart);
-checkoutButton.addEventListener("click", handleCheckout);
-
-// Product modal event listeners
-closeProductModal.addEventListener("click", closeProductModalHandler);
-productDetailsButton.addEventListener("click", () => {
-  if (currentProductInfo) {
-    showProductDetails(currentProductInfo);
-  } else {
-    const productInfo = extractProductInfo();
-    showProductDetails(productInfo);
-  }
-});
-
-// Modal overlay click to close
-cartModal.addEventListener("click", (e) => {
-  if (e.target === cartModal || e.target.classList.contains("modal-overlay")) {
-    closeCartModalHandler();
-  }
-});
-
-productModal.addEventListener("click", (e) => {
-  if (
-    e.target === productModal ||
-    e.target.classList.contains("modal-overlay")
-  ) {
-    closeProductModalHandler();
-  }
-});
-
-// Keyboard shortcuts
-document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape") {
-    if (!cartModal.classList.contains("hidden")) {
-      closeCartModalHandler();
-    }
-    if (!productModal.classList.contains("hidden")) {
-      closeProductModalHandler();
-    }
-  }
-});
+minimizeButton.addEventListener("click", handleMinimize);
 
 // --- Initialization ---
-// When the popup loads, ask the content script for images
+// When the fullscreen page loads, ask the content script for images
 document.addEventListener("DOMContentLoaded", async () => {
   updateGenerateButtonState(); // Initial state
   enableDownload(false);
-
-  // Load cart items from storage
-  await loadCartItems();
-
-  // Add click event listeners for preview images
-  previewImage.addEventListener("click", handleClothingPreviewClick);
-  personPreviewImage.addEventListener("click", handlePersonPreviewClick);
-
-  // Set initial state - show upload container if no image is selected
-  if (!personImageInput.files.length) {
-    document
-      .getElementById("person-upload-container")
-      .classList.remove("hidden");
-    personPreviewContainer.classList.add("hidden");
-  }
 
   // Restore saved data from previous session
   await restorePreviousSession();
@@ -1279,7 +755,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       galleryContainer.innerHTML = `
         <div class="gallery-loading">
           <div style="font-size: 2rem; margin-bottom: 1rem;">⚠️</div>
-          <p class="loading-text">Aucun onglet actif trouvé.</p>
+          <p class="loading-text">No active tab found.</p>
         </div>
       `;
       return;
@@ -1302,9 +778,9 @@ document.addEventListener("DOMContentLoaded", async () => {
               galleryContainer.innerHTML = `
                 <div class="gallery-loading">
                   <div style="font-size: 2rem; margin-bottom: 1rem;">🚫</div>
-                  <p class="loading-text">Impossible d'accéder aux images sur cette page.</p>
+                  <p class="loading-text">Unable to access images on this page.</p>
                   <p style="font-size: 0.75rem; color: #666; margin-top: 0.5rem;">
-                    Essayez de naviguer sur un site web normal au lieu des pages système.
+                    Try navigating to a normal website instead of system pages.
                   </p>
                 </div>
               `;
@@ -1319,9 +795,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         galleryContainer.innerHTML = `
           <div class="gallery-loading">
             <div style="font-size: 2rem; margin-bottom: 1rem;">⚠️</div>
-            <p class="loading-text">Impossible d'accéder aux images sur cette page.</p>
+            <p class="loading-text">Unable to access images on this page.</p>
             <p style="font-size: 0.75rem; color: #666; margin-top: 0.5rem;">
-              Veuillez actualiser la page et réessayer.
+              Please refresh the page and try again.
             </p>
           </div>
         `;
