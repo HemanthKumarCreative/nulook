@@ -3,22 +3,23 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>HIMYT TryON</title>
+    <title>NUSENSE TryON</title>
     <link rel="stylesheet" href="popup.css" />
   </head>
   <body>
     <!-- Header -->
     <header class="header">
       <div class="logo">
-        <div class="logo-icon">👗</div>
         <div class="logo-text">
-          <h1>HIMYT TryON</h1>
+          <h1>
+            <img src="NUSENSE_LOGO.svg" alt="NUSENSE" class="logo-text-image" />
+          </h1>
           <p class="tagline">Essayage Virtuel Alimenté par IA</p>
         </div>
       </div>
       <div class="header-actions">
         <button id="cart-btn" class="cart-btn" title="Voir le panier">
-          <span class="cart-icon">🛒</span>
+          <span class="cart-icon">🛍️</span>
           <span id="cart-count" class="cart-count hidden">0</span>
         </button>
       </div>
@@ -53,7 +54,7 @@
                     class="file-input"
                   />
                   <label for="person-image" class="upload-label">
-                    <div class="upload-icon">📸</div>
+                    <div class="upload-icon">📷</div>
                     <div class="upload-text">
                       <span class="upload-title"
                         >Cliquez pour télécharger votre photo</span
@@ -129,7 +130,7 @@
         <!-- Generate Button -->
         <div class="generate-section">
           <button type="submit" id="generate-btn" class="generate-btn">
-            <span class="btn-icon">✨</span>
+            <span class="btn-icon">⚡</span>
             <span class="btn-text">Générer l'Essayage Virtuel</span>
             <div class="btn-loading hidden">
               <div class="loading-spinner"></div>
@@ -147,42 +148,33 @@
           <h3>Votre Résultat d'Essayage Virtuel</h3>
           <p class="result-subtitle">Voici comment le vêtement vous va !</p>
         </div>
-        <div class="result-image-container">
-          <img
-            id="result-image"
-            src=""
-            alt="Résultat d'Essayage Virtuel Généré"
-          />
-        </div>
-        <div class="result-actions">
-          <button
-            type="button"
-            id="product-details-btn"
-            class="product-details-btn"
-          >
-            <span class="btn-icon">ℹ️</span>
-            <span class="btn-text">Détails</span>
-          </button>
-          <button type="button" id="buy-now-btn" class="buy-now-btn">
-            <span class="btn-icon">🛒</span>
-            <span class="btn-text">Buy Now</span>
-          </button>
-          <button type="button" id="add-to-cart-btn" class="add-to-cart-btn">
-            <span class="btn-icon">➕</span>
-            <span class="btn-text">Add to Cart</span>
-          </button>
-          <button type="button" id="download-btn" class="download-btn">
-            <span class="btn-icon">💾</span>
-            <span class="btn-text">Télécharger</span>
-          </button>
-          <button
-            type="button"
-            id="clear-storage-btn"
-            class="clear-storage-btn"
-          >
-            <span class="btn-icon">🗑️</span>
-            <span class="btn-text">Effacer les Données</span>
-          </button>
+        <div class="result-content">
+          <div class="result-image-container">
+            <img
+              id="result-image"
+              src=""
+              alt="Résultat d'Essayage Virtuel Généré"
+            />
+          </div>
+          <div class="result-actions">
+            <button type="button" id="buy-now-btn" class="buy-now-btn">
+              <span class="btn-icon">💳</span>
+              <span class="btn-text">Buy Now</span>
+            </button>
+            <button type="button" id="add-to-cart-btn" class="add-to-cart-btn">
+              <span class="btn-icon">🛒</span>
+              <span class="btn-text">Add to Cart</span>
+            </button>
+            <button
+              type="button"
+              id="download-btn"
+              class="download-btn"
+              title="Télécharger un collage avec toutes les images et détails du produit"
+            >
+              <span class="btn-icon">📥</span>
+              <span class="btn-text">Télécharger</span>
+            </button>
+          </div>
         </div>
       </div>
     </main>
@@ -204,7 +196,7 @@
         <div class="modal-body">
           <div id="cart-items-container" class="cart-items-container">
             <div class="empty-cart">
-              <div class="empty-cart-icon">🛒</div>
+              <div class="empty-cart-icon">🛍️</div>
               <p>Votre panier est vide</p>
               <small>Ajoutez des articles pour commencer vos achats</small>
             </div>
@@ -219,7 +211,7 @@
           </div>
           <div class="cart-actions">
             <button id="clear-cart-btn" class="clear-cart-btn">
-              <span class="btn-icon">🗑️</span>
+              <span class="btn-icon">🗑</span>
               <span class="btn-text">Vider le panier</span>
             </button>
             <button id="checkout-btn" class="checkout-btn">
@@ -231,31 +223,15 @@
       </div>
     </div>
 
-    <!-- Product Details Modal -->
-    <div id="product-modal" class="modal hidden">
-      <div class="modal-overlay"></div>
-      <div class="modal-content">
-        <div class="modal-header">
-          <h3>Détails du Produit</h3>
-          <button
-            id="close-product-modal"
-            class="close-btn"
-            aria-label="Fermer les détails"
-          >
-            <span>✕</span>
-          </button>
-        </div>
-        <div class="modal-body">
-          <div id="product-details-container" class="product-details-container">
-            <!-- Product details will be populated here -->
-          </div>
-        </div>
-      </div>
-    </div>
-
     <!-- Footer -->
     <footer class="footer">
-      <p>Alimenté par la Technologie IA HIMYT</p>
+      <p>
+        Alimenté par la Technologie IA
+        <img src="NUSENSE_LOGO.svg" alt="NUSENSE" class="footer-logo" />
+      </p>
+      <p class="copyright">
+        © <span id="current-year">2025</span> NUSENSE. Tous droits réservés.
+      </p>
     </footer>
 
     <script src="popup.js"></script>

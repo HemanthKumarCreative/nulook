@@ -1,4 +1,4 @@
-// fullscreen.js - Fullscreen version of HIMYT TryON
+// fullscreen.js - Fullscreen version of NUSENSE TryON
 
 // Import all functionality from popup.js
 // This file extends the popup functionality for fullscreen mode
@@ -9,10 +9,10 @@ let inFlightController = null;
 
 // --- Storage Keys ---
 const STORAGE_KEYS = {
-  UPLOADED_IMAGE: "himyt_tryon_uploaded_image",
-  GENERATED_IMAGE: "himyt_tryon_generated_image",
-  SELECTED_CLOTHING_URL: "himyt_tryon_selected_clothing_url",
-  LAST_SESSION_DATA: "himyt_tryon_last_session",
+  UPLOADED_IMAGE: "nusense_tryon_uploaded_image",
+  GENERATED_IMAGE: "nusense_tryon_generated_image",
+  SELECTED_CLOTHING_URL: "nusense_tryon_selected_clothing_url",
+  LAST_SESSION_DATA: "nusense_tryon_last_session",
 };
 
 // --- DOM Elements ---
@@ -87,19 +87,6 @@ async function clearStorageKey(key) {
     console.log(`Cleared storage: ${key}`);
   } catch (error) {
     console.error(`Failed to clear storage ${key}:`, error);
-  }
-}
-
-/**
- * Clear all extension storage
- * @returns {Promise<void>}
- */
-async function clearAllStorage() {
-  try {
-    await chrome.storage.local.clear();
-    console.log("Cleared all storage");
-  } catch (error) {
-    console.error("Failed to clear all storage:", error);
   }
 }
 
@@ -357,11 +344,11 @@ function setBusy(isBusy) {
   if (isBusy) {
     btnLoading.classList.remove("hidden");
     btnText.textContent = "Generating...";
-    btnIcon.textContent = "⏳";
+    btnIcon.textContent = "⏱️";
   } else {
     btnLoading.classList.add("hidden");
     btnText.textContent = "Generate Virtual Try-On";
-    btnIcon.textContent = "✨";
+    btnIcon.textContent = "⚡";
   }
 }
 
@@ -514,7 +501,7 @@ function handleDownloadImage() {
   try {
     const link = document.createElement("a");
     link.href = resultImage.src; // data:image/png;base64,...
-    link.download = `virtual-try-on-${Date.now()}.png`;
+    link.download = `nusense-virtual-try-on-${Date.now()}.png`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -742,6 +729,12 @@ minimizeButton.addEventListener("click", handleMinimize);
 // --- Initialization ---
 // When the fullscreen page loads, ask the content script for images
 document.addEventListener("DOMContentLoaded", async () => {
+  // Set current year dynamically
+  const currentYearElement = document.getElementById("current-year");
+  if (currentYearElement) {
+    currentYearElement.textContent = new Date().getFullYear();
+  }
+
   updateGenerateButtonState(); // Initial state
   enableDownload(false);
 

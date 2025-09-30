@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>HIMYT TryON - Full Screen</title>
+    <title>NUSENSE TryON - Full Screen</title>
     <link rel="stylesheet" href="fullscreen.css" />
   </head>
   <body>
@@ -11,9 +11,14 @@
     <header class="header">
       <div class="header-content">
         <div class="logo">
-          <div class="logo-icon">👗</div>
           <div class="logo-text">
-            <h1>HIMYT TryON</h1>
+            <h1>
+              <img
+                src="NUSENSE_LOGO.svg"
+                alt="NUSENSE"
+                class="logo-text-image"
+              />
+            </h1>
             <p class="tagline">AI-Powered Virtual Try-On</p>
           </div>
         </div>
@@ -55,7 +60,7 @@
                   class="file-input"
                 />
                 <label for="person-image" class="upload-label">
-                  <div class="upload-icon">📸</div>
+                  <div class="upload-icon">📷</div>
                   <div class="upload-text">
                     <span class="upload-title">Click to upload your photo</span>
                     <span class="upload-subtitle"
@@ -131,7 +136,7 @@
           <!-- Generate Button -->
           <div class="generate-section">
             <button type="submit" id="generate-btn" class="generate-btn">
-              <span class="btn-icon">✨</span>
+              <span class="btn-icon">⚡</span>
               <span class="btn-text">Generate Virtual Try-On</span>
               <div class="btn-loading hidden">
                 <div class="loading-spinner"></div>
@@ -149,26 +154,32 @@
             <h3>Your Virtual Try-On Result</h3>
             <p class="result-subtitle">Here's how the clothing looks on you!</p>
           </div>
-          <div class="result-image-container">
-            <img
-              id="result-image"
-              src=""
-              alt="Generated Virtual Try-On Result"
-            />
-          </div>
-          <div class="result-actions">
-            <button type="button" id="buy-now-btn" class="buy-now-btn">
-              <span class="btn-icon">🛒</span>
-              <span class="btn-text">Buy Now</span>
-            </button>
-            <button type="button" id="add-to-cart-btn" class="add-to-cart-btn">
-              <span class="btn-icon">➕</span>
-              <span class="btn-text">Add to Cart</span>
-            </button>
-            <button type="button" id="download-btn" class="download-btn">
-              <span class="btn-icon">💾</span>
-              <span class="btn-text">Download Image</span>
-            </button>
+          <div class="result-content">
+            <div class="result-image-container">
+              <img
+                id="result-image"
+                src=""
+                alt="Generated Virtual Try-On Result"
+              />
+            </div>
+            <div class="result-actions">
+              <button type="button" id="buy-now-btn" class="buy-now-btn">
+                <span class="btn-icon">💳</span>
+                <span class="btn-text">Buy Now</span>
+              </button>
+              <button
+                type="button"
+                id="add-to-cart-btn"
+                class="add-to-cart-btn"
+              >
+                <span class="btn-icon">🛒</span>
+                <span class="btn-text">Add to Cart</span>
+              </button>
+              <button type="button" id="download-btn" class="download-btn">
+                <span class="btn-icon">📥</span>
+                <span class="btn-text">Download Image</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -176,7 +187,14 @@
 
     <!-- Footer -->
     <footer class="footer">
-      <p>Powered by HIMYT AI Technology</p>
+      <p>
+        Powered by
+        <img src="NUSENSE_LOGO.svg" alt="NUSENSE" class="footer-logo" /> AI
+        Technology
+      </p>
+      <p class="copyright">
+        © <span id="current-year">2025</span> NUSENSE. All rights reserved.
+      </p>
     </footer>
 
     <script src="fullscreen.js"></script>

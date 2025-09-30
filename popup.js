@@ -8,12 +8,12 @@ let currentProductInfo = null;
 
 // --- Storage Keys ---
 const STORAGE_KEYS = {
-  UPLOADED_IMAGE: "himyt_tryon_uploaded_image",
-  GENERATED_IMAGE: "himyt_tryon_generated_image",
-  SELECTED_CLOTHING_URL: "himyt_tryon_selected_clothing_url",
-  LAST_SESSION_DATA: "himyt_tryon_last_session",
-  CART_ITEMS: "himyt_tryon_cart_items",
-  PRODUCT_INFO: "himyt_tryon_product_info",
+  UPLOADED_IMAGE: "nusense_tryon_uploaded_image",
+  GENERATED_IMAGE: "nusense_tryon_generated_image",
+  SELECTED_CLOTHING_URL: "nusense_tryon_selected_clothing_url",
+  LAST_SESSION_DATA: "nusense_tryon_last_session",
+  CART_ITEMS: "nusense_tryon_cart_items",
+  PRODUCT_INFO: "nusense_tryon_product_info",
 };
 
 // --- DOM Elements ---
@@ -32,7 +32,6 @@ const statusDiv = document.getElementById("status");
 const resultContainer = document.getElementById("result-container");
 const resultImage = document.getElementById("result-image");
 const downloadButton = document.getElementById("download-btn");
-const clearStorageButton = document.getElementById("clear-storage-btn");
 const buyNowButton = document.getElementById("buy-now-btn");
 const addToCartButton = document.getElementById("add-to-cart-btn");
 const cartButton = document.getElementById("cart-btn");
@@ -43,12 +42,6 @@ const cartItemsContainer = document.getElementById("cart-items-container");
 const cartTotalPrice = document.getElementById("cart-total-price");
 const clearCartButton = document.getElementById("clear-cart-btn");
 const checkoutButton = document.getElementById("checkout-btn");
-const productModal = document.getElementById("product-modal");
-const closeProductModal = document.getElementById("close-product-modal");
-const productDetailsContainer = document.getElementById(
-  "product-details-container"
-);
-const productDetailsButton = document.getElementById("product-details-btn");
 
 // Backend URL (adjust if needed)
 const API_URL = "https://try-on-server-six.vercel.app/api/tryon";
@@ -102,19 +95,6 @@ async function clearStorageKey(key) {
     console.log(`Cleared storage: ${key}`);
   } catch (error) {
     console.error(`Failed to clear storage ${key}:`, error);
-  }
-}
-
-/**
- * Clear all extension storage
- * @returns {Promise<void>}
- */
-async function clearAllStorage() {
-  try {
-    await chrome.storage.local.clear();
-    console.log("Cleared all storage");
-  } catch (error) {
-    console.error("Failed to clear all storage:", error);
   }
 }
 
@@ -376,13 +356,13 @@ function setBusy(isBusy) {
     btnLoading.classList.remove("hidden");
     btnLoading.classList.add("show");
     btnText.textContent = "Génération...";
-    btnIcon.textContent = "⏳";
+    btnIcon.textContent = "⏱️";
   } else {
     generateButton.classList.remove("button-loading");
     btnLoading.classList.add("hidden");
     btnLoading.classList.remove("show");
     btnText.textContent = "Générer l'Essayage Virtuel";
-    btnIcon.textContent = "✨";
+    btnIcon.textContent = "⚡";
   }
 }
 
@@ -562,23 +542,462 @@ function updateLayoutState(personSelected, clothingSelected) {
 }
 
 /**
- * Handles downloading the generated image (PNG).
+ * Creates a collage with uploaded image, selected clothing image, generated result, and product details
+ * @returns {Promise<string>} - Data URL of the generated collage
  */
-function handleDownloadImage() {
+async function createCollage() {
+  return new Promise((resolve, reject) => {
+    try {
+      // Get all required images
+      const uploadedImageSrc = personPreviewImage.src;
+      const selectedImageSrc = previewImage.src;
+      const generatedImageSrc = resultImage.src;
+
+      if (!uploadedImageSrc || !selectedImageSrc || !generatedImageSrc) {
+        reject(new Error("Missing required images for collage"));
+        return;
+      }
+
+      // Get product information
+      const productInfo = extractProductInfo();
+
+      // Create canvas for collage
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+
+      // Set canvas dimensions (wider for horizontal layout, sufficient height to prevent overlap)
+      const canvasWidth = 1400;
+      const canvasHeight = 700; // Increased height to prevent overlap between images and details
+      canvas.width = canvasWidth;
+      canvas.height = canvasHeight;
+
+      // Fill background with gradient
+      const gradient = ctx.createLinearGradient(
+        0,
+        0,
+        canvasWidth,
+        canvasHeight
+      );
+      gradient.addColorStop(0, "#f8fafc");
+      gradient.addColorStop(1, "#e2e8f0");
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+      // Add header with title and logo
+      ctx.fillStyle = "#1e293b";
+      ctx.font =
+        'bold 32px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.textAlign = "center";
+
+      // Draw "TryON - Résultat d'Essayage Virtuel" text
+      ctx.fillText("TryON - Résultat d'Essayage Virtuel", canvasWidth / 2, 50);
+
+      // Add subtitle
+      ctx.fillStyle = "#64748b";
+      ctx.font =
+        '18px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.fillText(
+        "Généré le " + new Date().toLocaleDateString("fr-FR"),
+        canvasWidth / 2,
+        80
+      );
+
+      // Image dimensions and layout
+      const imageSize = 220;
+      const spacing = 100; // Increased spacing for clear separation
+      const startY = 120;
+      const centerX = canvasWidth / 2;
+
+      // Calculate positions for horizontal layout with proper spacing
+      const totalWidth = imageSize * 3 + spacing * 2; // Total width needed
+      const startX = (canvasWidth - totalWidth) / 2; // Start position to center everything
+
+      const uploadedX = startX; // Leftmost position
+      const generatedX = startX + imageSize + spacing; // Center position
+      const selectedX = startX + (imageSize + spacing) * 2; // Rightmost position
+
+      // Load and draw images
+      const images = [
+        {
+          src: uploadedImageSrc,
+          label: "Votre Photo",
+          x: uploadedX,
+          y: startY,
+        },
+        {
+          src: selectedImageSrc,
+          label: "Article Sélectionné",
+          x: generatedX,
+          y: startY,
+        },
+        {
+          src: generatedImageSrc,
+          label: "Résultat Final",
+          x: selectedX,
+          y: startY,
+        },
+      ];
+
+      // Load NUSENSE logo
+      const logoImage = new Image();
+      logoImage.crossOrigin = "anonymous";
+
+      let loadedImages = 0;
+      const totalImages = images.length + 1; // +1 for logo
+
+      // Function to check if all images are loaded
+      const checkAllLoaded = () => {
+        if (loadedImages === totalImages) {
+          // Draw separators between images
+          drawSeparators(
+            ctx,
+            uploadedX,
+            generatedX,
+            selectedX,
+            imageSize,
+            startY
+          );
+
+          // Add product details section
+          addProductDetailsToCollage(
+            ctx,
+            productInfo,
+            canvasWidth,
+            canvasHeight
+          );
+          resolve(canvas.toDataURL("image/png", 1.0));
+        }
+      };
+
+      images.forEach((imageData, index) => {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+
+        img.onload = () => {
+          // Draw image with border
+          ctx.strokeStyle = "#ef5746";
+          ctx.lineWidth = 4;
+          ctx.strokeRect(
+            imageData.x - 2,
+            imageData.y - 2,
+            imageSize + 4,
+            imageSize + 4
+          );
+
+          // Draw image maintaining aspect ratio
+          const aspectRatio = img.width / img.height;
+          let drawWidth = imageSize;
+          let drawHeight = imageSize;
+          let offsetX = 0;
+          let offsetY = 0;
+
+          if (aspectRatio > 1) {
+            // Image is wider than tall
+            drawHeight = imageSize / aspectRatio;
+            offsetY = (imageSize - drawHeight) / 2;
+          } else {
+            // Image is taller than wide
+            drawWidth = imageSize * aspectRatio;
+            offsetX = (imageSize - drawWidth) / 2;
+          }
+
+          ctx.drawImage(
+            img,
+            imageData.x + offsetX,
+            imageData.y + offsetY,
+            drawWidth,
+            drawHeight
+          );
+
+          // Draw label
+          ctx.fillStyle = "#1e293b";
+          ctx.font =
+            'bold 16px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+          ctx.textAlign = "center";
+          ctx.fillText(
+            imageData.label,
+            imageData.x + imageSize / 2,
+            imageData.y + imageSize + 25
+          );
+
+          loadedImages++;
+          checkAllLoaded();
+        };
+
+        img.onerror = () => {
+          console.error(`Failed to load image: ${imageData.src}`);
+          loadedImages++;
+          checkAllLoaded();
+        };
+
+        img.src = imageData.src;
+      });
+
+      // Load and draw NUSENSE logo
+      logoImage.onload = () => {
+        // Calculate text width to position logo properly
+        const text = "TryON - Résultat d'Essayage Virtuel";
+        const textWidth = ctx.measureText(text).width;
+
+        // Draw logo in the header area - positioned to the left of text with proper spacing
+        const logoHeight = 28; // Fixed height to maintain aspect ratio
+        const logoWidth = (logoImage.width / logoImage.height) * logoHeight; // Maintain aspect ratio
+        const logoSpacing = 20; // Increased space between logo and text
+        const logoX =
+          canvasWidth / 2 - textWidth / 2 - logoWidth - logoSpacing - 150; // Move 150px further left
+        const logoY = 40 - logoHeight / 2; // Move logo up by 10px
+
+        // Draw logo with subtle shadow for better visibility
+        ctx.shadowColor = "rgba(0, 0, 0, 0.1)";
+        ctx.shadowBlur = 4;
+        ctx.shadowOffsetX = 2;
+        ctx.shadowOffsetY = 2;
+
+        ctx.drawImage(logoImage, logoX, logoY, logoWidth, logoHeight);
+
+        // Reset shadow
+        ctx.shadowColor = "transparent";
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+
+        // Also draw smaller logo in footer - properly aligned with text
+        const footerText = "Généré par - Alimenté par l'IA";
+        const footerTextWidth = ctx.measureText(footerText).width;
+        const footerLogoHeight = 12;
+        const footerLogoWidth =
+          (logoImage.width / logoImage.height) * footerLogoHeight;
+        const footerLogoSpacing = 8; // Space between logo and text
+        const footerLogoX =
+          canvasWidth / 2 -
+          footerTextWidth / 2 -
+          footerLogoWidth -
+          footerLogoSpacing;
+        const footerLogoY = canvasHeight - 15 - footerLogoHeight / 2; // Center vertically with footer text
+
+        ctx.drawImage(
+          logoImage,
+          footerLogoX,
+          footerLogoY,
+          footerLogoWidth,
+          footerLogoHeight
+        );
+
+        loadedImages++;
+        checkAllLoaded();
+      };
+
+      logoImage.onerror = () => {
+        console.error("Failed to load NUSENSE logo");
+        loadedImages++;
+        checkAllLoaded();
+      };
+
+      logoImage.src = "NUSENSE_LOGO.svg";
+    } catch (error) {
+      reject(error);
+    }
+  });
+}
+
+/**
+ * Draws separators between images
+ * @param {CanvasRenderingContext2D} ctx - Canvas context
+ * @param {number} uploadedX - X position of uploaded image
+ * @param {number} generatedX - X position of generated image
+ * @param {number} selectedX - X position of selected image
+ * @param {number} imageSize - Size of images
+ * @param {number} startY - Y position of images
+ */
+function drawSeparators(
+  ctx,
+  uploadedX,
+  generatedX,
+  selectedX,
+  imageSize,
+  startY
+) {
+  const centerY = startY + imageSize / 2;
+
+  // Draw "+" between uploaded and selected images (now in center)
+  const plusX = uploadedX + imageSize + 50; // Position in the middle of the spacing
+  ctx.fillStyle = "#ef5746";
+  ctx.font = "bold 48px Arial, sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText("+", plusX, centerY + 15);
+
+  // Draw "=" between selected and generated images (now on right)
+  const equalX = generatedX + imageSize + 50; // Position in the middle of the spacing
+  ctx.fillStyle = "#ef5746";
+  ctx.font = "bold 36px Arial, sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText("=", equalX, centerY + 10);
+}
+
+/**
+ * Adds product details to the collage
+ * @param {CanvasRenderingContext2D} ctx - Canvas context
+ * @param {Object} productInfo - Product information object
+ * @param {number} canvasWidth - Canvas width
+ * @param {number} canvasHeight - Canvas height
+ */
+function addProductDetailsToCollage(
+  ctx,
+  productInfo,
+  canvasWidth,
+  canvasHeight
+) {
+  const detailsStartY = 400; // Moved further down to prevent overlap with images
+  const detailsWidth = canvasWidth - 100;
+  const detailsX = 50;
+  const detailsHeight = canvasHeight - detailsStartY - 50;
+
+  // Add product details background
+  ctx.fillStyle = "rgba(255, 255, 255, 0.95)";
+  ctx.fillRect(detailsX, detailsStartY, detailsWidth, detailsHeight);
+
+  // Add border
+  ctx.strokeStyle = "#e2e8f0";
+  ctx.lineWidth = 2;
+  ctx.strokeRect(detailsX, detailsStartY, detailsWidth, detailsHeight);
+
+  // Add product details title
+  ctx.fillStyle = "#1e293b";
+  ctx.font =
+    'bold 18px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  ctx.textAlign = "left";
+  ctx.fillText("Détails du Produit", detailsX + 20, detailsStartY + 25);
+
+  // Grid layout parameters
+  const gridPadding = 20;
+  const cellPadding = 15;
+  const maxColumns = 3;
+  const cellWidth = (detailsWidth - gridPadding * 2) / maxColumns;
+  const cellHeight = 40; // Increased cell height for better readability
+  const lineHeight = 16;
+
+  // Define all product details to display (excluding name and description)
+  const productDetails = [
+    {
+      label: "Prix",
+      value: `${productInfo.price.toFixed(2)} €`,
+      highlight: true,
+    },
+    { label: "Marque", value: productInfo.brand, highlight: false },
+    { label: "Catégorie", value: productInfo.category, highlight: false },
+    {
+      label: "Disponibilité",
+      value: productInfo.availability,
+      highlight: false,
+    },
+    { label: "Note", value: productInfo.rating, highlight: false },
+    { label: "Tailles", value: productInfo.sizes, highlight: false },
+    { label: "Couleurs", value: productInfo.colors, highlight: false },
+    { label: "Matière", value: productInfo.material, highlight: false },
+  ];
+
+  // Draw grid items
+  let currentRow = 0;
+  let currentCol = 0;
+  let startY = detailsStartY + 50;
+
+  productDetails.forEach((detail, index) => {
+    const x = detailsX + gridPadding + currentCol * cellWidth;
+    const y = startY + currentRow * cellHeight;
+
+    // Draw cell background
+    ctx.fillStyle =
+      index % 2 === 0 ? "rgba(248, 250, 252, 0.8)" : "rgba(255, 255, 255, 0.8)";
+    ctx.fillRect(x, y, cellWidth - cellPadding, cellHeight - 5);
+
+    // Draw cell border
+    ctx.strokeStyle = "#f1f5f9";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x, y, cellWidth - cellPadding, cellHeight - 5);
+
+    // Draw label
+    ctx.fillStyle = "#64748b";
+    ctx.font =
+      'bold 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.textAlign = "left";
+    ctx.fillText(detail.label + ":", x + 8, y + 15);
+
+    // Draw value
+    ctx.fillStyle = detail.highlight ? "#ef5746" : "#1e293b";
+    ctx.font = detail.highlight
+      ? 'bold 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+      : '12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+
+    // Truncate long values
+    let displayValue = detail.value;
+    const maxWidth = cellWidth - cellPadding - 16;
+    const metrics = ctx.measureText(displayValue);
+
+    if (metrics.width > maxWidth) {
+      while (
+        ctx.measureText(displayValue + "...").width > maxWidth &&
+        displayValue.length > 0
+      ) {
+        displayValue = displayValue.slice(0, -1);
+      }
+      displayValue += "...";
+    }
+
+    ctx.fillText(displayValue, x + 8, y + 32);
+
+    // Move to next position
+    currentCol++;
+    if (currentCol >= maxColumns) {
+      currentCol = 0;
+      currentRow++;
+    }
+  });
+
+  // Add footer with logo
+  ctx.fillStyle = "#9ca3af";
+  ctx.font =
+    '10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  ctx.textAlign = "center";
+
+  // Draw footer text (logo will be drawn separately)
+  const footerText = "Généré par - Alimenté par l'IA";
+  const footerX = canvasWidth / 2;
+  const footerY = canvasHeight - 15;
+
+  // Draw text (logo will be positioned by the logo loading function)
+  ctx.fillText(footerText, footerX, footerY);
+
+  // Draw copyright text below the main footer text
+  const copyrightText = "© 2025 NUSENSE. Tous droits réservés.";
+  const copyrightY = canvasHeight - 5;
+  ctx.fillText(copyrightText, footerX, copyrightY);
+}
+
+/**
+ * Handles downloading the generated collage with all images and product details.
+ */
+async function handleDownloadImage() {
   if (!resultImage.src) {
     setStatus("Aucune image à télécharger.");
     return;
   }
 
   try {
+    setStatus("🎨 Création de votre collage personnalisé...");
+
+    // Create the collage
+    const collageDataUrl = await createCollage();
+
+    // Download the collage
     const link = document.createElement("a");
-    link.href = resultImage.src; // data:image/png;base64,...
-    link.download = `virtual-try-on-${Date.now()}.png`;
+    link.href = collageDataUrl;
+    link.download = `nusense-tryon-collage-${Date.now()}.png`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+
     setStatus(
-      "💾 Image téléchargée avec succès ! Vérifiez votre dossier de téléchargements."
+      "💾 Collage téléchargé avec succès ! Vérifiez votre dossier de téléchargements."
     );
   } catch (error) {
     console.error("Download failed:", error);
@@ -666,6 +1085,13 @@ function extractProductInfo() {
     image: selectedClothingUrl,
     url: window.location.href,
     description: extractProductDescription(),
+    sizes: extractProductSizes(),
+    colors: extractProductColors(),
+    brand: extractProductBrand(),
+    category: extractProductCategory(),
+    availability: extractProductAvailability(),
+    rating: extractProductRating(),
+    material: extractProductMaterial(),
     timestamp: Date.now(),
   };
 
@@ -749,6 +1175,200 @@ function extractProductDescription() {
   }
 
   return "Article de vêtement sélectionné pour l'essayage virtuel.";
+}
+
+/**
+ * Extract available sizes from the page
+ */
+function extractProductSizes() {
+  const sizeSelectors = [
+    '[data-testid*="size"]',
+    ".size-selector",
+    ".product-sizes",
+    ".size-options",
+    '[class*="size"]',
+  ];
+
+  for (const selector of sizeSelectors) {
+    const element = document.querySelector(selector);
+    if (element) {
+      const sizeElements = element.querySelectorAll("button, span, div");
+      const sizes = Array.from(sizeElements)
+        .map((el) => el.textContent.trim())
+        .filter((text) => text && /^[XS|S|M|L|XL|XXL|\d]+$/.test(text))
+        .slice(0, 8); // Limit to 8 sizes
+
+      if (sizes.length > 0) {
+        return sizes.join(", ");
+      }
+    }
+  }
+
+  return "S, M, L, XL"; // Default sizes
+}
+
+/**
+ * Extract available colors from the page
+ */
+function extractProductColors() {
+  const colorSelectors = [
+    '[data-testid*="color"]',
+    ".color-selector",
+    ".product-colors",
+    ".color-options",
+    '[class*="color"]',
+  ];
+
+  for (const selector of colorSelectors) {
+    const element = document.querySelector(selector);
+    if (element) {
+      const colorElements = element.querySelectorAll("button, span, div");
+      const colors = Array.from(colorElements)
+        .map((el) => el.textContent.trim())
+        .filter((text) => text && text.length < 20)
+        .slice(0, 6); // Limit to 6 colors
+
+      if (colors.length > 0) {
+        return colors.join(", ");
+      }
+    }
+  }
+
+  return "Noir, Blanc, Bleu"; // Default colors
+}
+
+/**
+ * Extract product brand from the page
+ */
+function extractProductBrand() {
+  const brandSelectors = [
+    '[data-testid*="brand"]',
+    ".brand",
+    ".product-brand",
+    ".manufacturer",
+    'meta[property="product:brand"]',
+  ];
+
+  for (const selector of brandSelectors) {
+    const element = document.querySelector(selector);
+    if (element) {
+      const brand = element.textContent?.trim() || element.content?.trim();
+      if (brand && brand.length < 30) {
+        return brand;
+      }
+    }
+  }
+
+  return "Marque Inconnue";
+}
+
+/**
+ * Extract product category from the page
+ */
+function extractProductCategory() {
+  const categorySelectors = [
+    '[data-testid*="category"]',
+    ".category",
+    ".product-category",
+    ".breadcrumb",
+    'meta[property="product:category"]',
+  ];
+
+  for (const selector of categorySelectors) {
+    const element = document.querySelector(selector);
+    if (element) {
+      const category = element.textContent?.trim() || element.content?.trim();
+      if (category && category.length < 30) {
+        return category;
+      }
+    }
+  }
+
+  return "Vêtements";
+}
+
+/**
+ * Extract product availability from the page
+ */
+function extractProductAvailability() {
+  const availabilitySelectors = [
+    '[data-testid*="availability"]',
+    ".availability",
+    ".stock-status",
+    ".in-stock",
+    ".out-of-stock",
+  ];
+
+  for (const selector of availabilitySelectors) {
+    const element = document.querySelector(selector);
+    if (element) {
+      const availability = element.textContent.trim().toLowerCase();
+      if (
+        availability.includes("en stock") ||
+        availability.includes("available")
+      ) {
+        return "En Stock";
+      } else if (
+        availability.includes("rupture") ||
+        availability.includes("out of stock")
+      ) {
+        return "Rupture de Stock";
+      }
+    }
+  }
+
+  return "Disponible";
+}
+
+/**
+ * Extract product rating from the page
+ */
+function extractProductRating() {
+  const ratingSelectors = [
+    '[data-testid*="rating"]',
+    ".rating",
+    ".product-rating",
+    ".stars",
+    '[class*="rating"]',
+  ];
+
+  for (const selector of ratingSelectors) {
+    const element = document.querySelector(selector);
+    if (element) {
+      const ratingText = element.textContent.trim();
+      const ratingMatch = ratingText.match(/(\d+[.,]\d+|\d+)\s*\/\s*5/);
+      if (ratingMatch) {
+        return ratingMatch[1] + "/5";
+      }
+    }
+  }
+
+  return "4.5/5";
+}
+
+/**
+ * Extract product material from the page
+ */
+function extractProductMaterial() {
+  const materialSelectors = [
+    '[data-testid*="material"]',
+    ".material",
+    ".product-material",
+    ".fabric",
+    '[class*="material"]',
+  ];
+
+  for (const selector of materialSelectors) {
+    const element = document.querySelector(selector);
+    if (element) {
+      const material = element.textContent.trim();
+      if (material && material.length < 50) {
+        return material;
+      }
+    }
+  }
+
+  return "Coton 100%";
 }
 
 /**
@@ -939,99 +1559,6 @@ async function handleCheckout() {
 }
 
 /**
- * Show product details modal
- */
-function showProductDetails(productInfo) {
-  productDetailsContainer.innerHTML = `
-    <img src="${productInfo.image}" alt="${
-    productInfo.name
-  }" class="product-image" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik02Ni42NyA2Ni42N0gxMzMuMzNWMTMzLjMzSDY2LjY3VjY2LjY3WiIgZmlsbD0iI0QxRDVEQiIvPgo8L3N2Zz4='">
-    <div class="product-info">
-      <h4 class="product-name">${productInfo.name}</h4>
-      <p class="product-description">${productInfo.description}</p>
-      <div class="product-price">${productInfo.price.toFixed(2)} €</div>
-    </div>
-    <div class="product-actions">
-      <button class="buy-now-btn" onclick="handleBuyNow(); closeProductModalHandler();">
-        <span class="btn-icon">🛒</span>
-        <span class="btn-text">Acheter maintenant</span>
-      </button>
-      <button class="add-to-cart-btn" onclick="handleAddToCart(); closeProductModalHandler();">
-        <span class="btn-icon">➕</span>
-        <span class="btn-text">Ajouter au panier</span>
-      </button>
-    </div>
-  `;
-
-  productModal.classList.remove("hidden");
-}
-
-function closeProductModalHandler() {
-  productModal.classList.add("hidden");
-}
-
-/**
- * Handles clearing all stored data
- */
-async function handleClearStorage() {
-  if (
-    !confirm(
-      "Êtes-vous sûr de vouloir effacer toutes les données sauvegardées ? Cette action ne peut pas être annulée."
-    )
-  ) {
-    return;
-  }
-
-  try {
-    // Clear all storage
-    await clearAllStorage();
-
-    // Reset UI state
-    selectedClothingUrl = null;
-    cartItems = [];
-    currentProductInfo = null;
-    personImageInput.value = "";
-    personPreviewImage.src = "";
-    personPreviewContainer.classList.add("hidden");
-    previewImage.src = "";
-    previewContainer.classList.add("hidden");
-    resultImage.src = "";
-    resultContainer.classList.add("hidden");
-
-    // Reset cart
-    updateCartCount();
-    renderCartItems();
-
-    // Reset gallery
-    galleryContainer.classList.remove("hidden");
-    galleryContainer.innerHTML = `
-      <div class="gallery-loading">
-        <div class="loading-spinner"></div>
-        <p class="loading-text">
-          Analyse de la page pour les articles de vêtements...
-        </p>
-      </div>
-    `;
-
-    // Update button states
-    updateGenerateButtonState();
-    enableDownload(false);
-
-    setStatus("🗑️ Toutes les données ont été effacées avec succès !");
-
-    // Clear status message after a few seconds
-    setTimeout(() => {
-      if (statusDiv.textContent.includes("effacées avec succès")) {
-        setStatus("");
-      }
-    }, 3000);
-  } catch (error) {
-    console.error("Failed to clear storage:", error);
-    setStatus("❌ Échec de l'effacement des données. Veuillez réessayer.");
-  }
-}
-
-/**
  * Main function to handle form submission.
  */
 async function handleFormSubmit(event) {
@@ -1199,7 +1726,6 @@ async function restorePreviousSession() {
 form.addEventListener("submit", handleFormSubmit);
 personImageInput.addEventListener("change", handlePersonImageSelection);
 downloadButton.addEventListener("click", handleDownloadImage);
-clearStorageButton.addEventListener("click", handleClearStorage);
 buyNowButton.addEventListener("click", handleBuyNow);
 addToCartButton.addEventListener("click", handleAddToCart);
 
@@ -1209,30 +1735,10 @@ closeCartModal.addEventListener("click", closeCartModalHandler);
 clearCartButton.addEventListener("click", clearCart);
 checkoutButton.addEventListener("click", handleCheckout);
 
-// Product modal event listeners
-closeProductModal.addEventListener("click", closeProductModalHandler);
-productDetailsButton.addEventListener("click", () => {
-  if (currentProductInfo) {
-    showProductDetails(currentProductInfo);
-  } else {
-    const productInfo = extractProductInfo();
-    showProductDetails(productInfo);
-  }
-});
-
 // Modal overlay click to close
 cartModal.addEventListener("click", (e) => {
   if (e.target === cartModal || e.target.classList.contains("modal-overlay")) {
     closeCartModalHandler();
-  }
-});
-
-productModal.addEventListener("click", (e) => {
-  if (
-    e.target === productModal ||
-    e.target.classList.contains("modal-overlay")
-  ) {
-    closeProductModalHandler();
   }
 });
 
@@ -1242,15 +1748,18 @@ document.addEventListener("keydown", (e) => {
     if (!cartModal.classList.contains("hidden")) {
       closeCartModalHandler();
     }
-    if (!productModal.classList.contains("hidden")) {
-      closeProductModalHandler();
-    }
   }
 });
 
 // --- Initialization ---
 // When the popup loads, ask the content script for images
 document.addEventListener("DOMContentLoaded", async () => {
+  // Set current year dynamically
+  const currentYearElement = document.getElementById("current-year");
+  if (currentYearElement) {
+    currentYearElement.textContent = new Date().getFullYear();
+  }
+
   updateGenerateButtonState(); // Initial state
   enableDownload(false);
 

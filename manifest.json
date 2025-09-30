@@ -1,19 +1,19 @@
 {
   "manifest_version": 3,
-  "name": "HIMYT TryON",
+  "name": "NUSENSE TryON",
   "version": "2.0",
   "description": "Transformez votre style avec l'essayage virtuel alimenté par IA. Sélectionnez des vêtements de n'importe quel site web et voyez comment ils vous vont instantanément.",
   "icons": {
-    "16": "icon.svg",
-    "48": "icon.svg",
-    "128": "icon.svg"
+    "16": "NUSENSE_LOGO.svg",
+    "48": "NUSENSE_LOGO.svg",
+    "128": "NUSENSE_LOGO.svg"
   },
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
-      "16": "icon.svg",
-      "48": "icon.svg",
-      "128": "icon.svg"
+      "16": "NUSENSE_LOGO.svg",
+      "48": "NUSENSE_LOGO.svg",
+      "128": "NUSENSE_LOGO.svg"
     }
   },
   "permissions": ["activeTab", "scripting", "storage"],
