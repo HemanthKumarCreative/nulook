@@ -1151,25 +1151,117 @@ function extractProductName() {
  * Extract product price from the page
  */
 function extractProductPrice() {
+  // Comprehensive price selectors for various e-commerce platforms
   const selectors = [
-    '[data-testid*="price"]',
+    // Common e-commerce selectors
+    '[data-testid*="data-v-69359d06"]',
+    '[data-testid*="cost"]',
+    '[data-testid*="amount"]',
+    '[data-testid*="value"]',
     ".price",
     ".product-price",
+    ".current-price",
+    ".sale-price",
+    ".final-price",
+    ".price-current",
+    ".price-now",
+    ".price-value",
     '[class*="price"]',
-    '[data-testid*="cost"]',
+    '[class*="cost"]',
+    '[class*="amount"]',
+
+    // Platform-specific selectors
+    ".a-price-whole", // Amazon
+    ".a-offscreen", // Amazon
+    ".price-box__price", // Shopify
+    ".product-price__current", // Shopify
+    ".price-current", // Magento
+    ".price-box .price", // Magento
+    ".product-price-value", // WooCommerce
+    ".woocommerce-Price-amount", // WooCommerce
+    ".price-current", // BigCommerce
+    ".product-price", // BigCommerce
+
+    // Generic selectors
+    '[itemprop="price"]',
+    '[itemprop="priceCurrency"]',
+    ".money",
+    ".currency",
+    ".amount",
+    ".value",
+
+    // Meta tags
+    'meta[property="product:price:amount"]',
+    'meta[property="og:price:amount"]',
+    'meta[name="price"]',
   ];
 
+  // Try each selector
   for (const selector of selectors) {
-    const element = document.querySelector(selector);
-    if (element && element.textContent.trim()) {
-      const priceText = element.textContent.trim();
-      const priceMatch = priceText.match(/[\d,]+\.?\d*/);
-      if (priceMatch) {
-        return parseFloat(priceMatch[0].replace(",", ""));
+    const elements = document.querySelectorAll(selector);
+
+    for (const element of elements) {
+      if (element && element.textContent) {
+        const priceText = element.textContent.trim();
+
+        // Enhanced price parsing patterns
+        const pricePatterns = [
+          /€\s*([\d,]+\.?\d*)/, // €29.99
+          /\$\s*([\d,]+\.?\d*)/, // $29.99
+          /£\s*([\d,]+\.?\d*)/, // £29.99
+          /([\d,]+\.?\d*)\s*€/, // 29.99€
+          /([\d,]+\.?\d*)\s*\$/, // 29.99$
+          /([\d,]+\.?\d*)\s*£/, // 29.99£
+          /([\d,]+\.?\d*)/, // Just numbers
+        ];
+
+        for (const pattern of pricePatterns) {
+          const match = priceText.match(pattern);
+          if (match) {
+            const priceValue = parseFloat(match[1].replace(",", ""));
+            if (priceValue > 0 && priceValue < 10000) {
+              // Reasonable price range
+              console.log(
+                `Found price: ${priceValue} from selector: ${selector}`
+              );
+              return priceValue;
+            }
+          }
+        }
+      }
+
+      // Check content attribute for meta tags
+      if (element.content) {
+        const priceValue = parseFloat(element.content.replace(",", ""));
+        if (priceValue > 0 && priceValue < 10000) {
+          console.log(`Found price: ${priceValue} from meta tag: ${selector}`);
+          return priceValue;
+        }
       }
     }
   }
 
+  // Try to find price in JSON-LD structured data
+  try {
+    const jsonLdScripts = document.querySelectorAll(
+      'script[type="application/ld+json"]'
+    );
+    for (const script of jsonLdScripts) {
+      const data = JSON.parse(script.textContent);
+      if (data && (data.price || data.offers?.price)) {
+        const price = data.price || data.offers?.price;
+        const priceValue = parseFloat(price);
+        if (priceValue > 0 && priceValue < 10000) {
+          console.log(`Found price: ${priceValue} from JSON-LD`);
+          return priceValue;
+        }
+      }
+    }
+  } catch (error) {
+    console.log("Error parsing JSON-LD:", error);
+  }
+
+  console.log("No price found, using default");
   return 29.99; // Default price
 }
 
@@ -1198,29 +1290,142 @@ function extractProductDescription() {
  * Extract available sizes from the page
  */
 function extractProductSizes() {
+  // Comprehensive size selectors for various e-commerce platforms
   const sizeSelectors = [
+    // Common e-commerce selectors
     '[data-testid*="size"]',
+    '[data-testid*="variant"]',
+    '[data-testid*="option"]',
     ".size-selector",
     ".product-sizes",
     ".size-options",
+    ".variant-selector",
+    ".size-chooser",
+    ".size-picker",
     '[class*="size"]',
+    '[class*="variant"]',
+    '[class*="option"]',
+
+    // Platform-specific selectors
+    ".swatch-option", // Magento
+    ".swatch-attribute-options", // Magento
+    ".product-options", // Magento
+    ".variant-selector", // Shopify
+    ".product-form__input", // Shopify
+    ".single-option-selector", // Shopify
+    ".variation-select", // WooCommerce
+    ".variation-selector", // WooCommerce
+    ".product-options", // WooCommerce
+    ".size-chart", // Various platforms
+    ".size-guide", // Various platforms
+
+    // Generic selectors
+    ".option",
+    ".choice",
+    ".select",
+    ".picker",
+    ".swatch",
   ];
 
+  // Try each selector
   for (const selector of sizeSelectors) {
-    const element = document.querySelector(selector);
-    if (element) {
-      const sizeElements = element.querySelectorAll("button, span, div");
-      const sizes = Array.from(sizeElements)
-        .map((el) => el.textContent.trim())
-        .filter((text) => text && /^[XS|S|M|L|XL|XXL|\d]+$/.test(text))
-        .slice(0, 8); // Limit to 8 sizes
+    const elements = document.querySelectorAll(selector);
 
+    for (const element of elements) {
+      if (element) {
+        // Look for size elements within the container
+        const sizeElements = element.querySelectorAll(
+          "button, span, div, option, input[type='radio'], input[type='checkbox']"
+        );
+        const sizes = [];
+
+        for (const el of sizeElements) {
+          const text =
+            el.textContent?.trim() ||
+            el.value?.trim() ||
+            el.getAttribute("data-value")?.trim();
+          if (text) {
+            // Enhanced size pattern matching
+            const sizePatterns = [
+              /^[XS|S|M|L|XL|XXL|XXXL]+$/, // Standard sizes
+              /^\d+$/, // Numeric sizes (28, 30, 32, etc.)
+              /^\d+\.\d+$/, // Decimal sizes (28.5, 30.5, etc.)
+              /^[0-9]+[A-Z]*$/, // Size with letter (28A, 30B, etc.)
+              /^[A-Z]+\d+$/, // Letter with number (S28, M30, etc.)
+              /^[0-9]+-[0-9]+$/, // Size ranges (28-30, 32-34, etc.)
+              /^[A-Z]+-[A-Z]+$/, // Letter ranges (S-M, L-XL, etc.)
+            ];
+
+            for (const pattern of sizePatterns) {
+              if (pattern.test(text) && text.length <= 10) {
+                // Reasonable size length
+                sizes.push(text);
+                break;
+              }
+            }
+          }
+        }
+
+        if (sizes.length > 0) {
+          // Remove duplicates and limit to reasonable number
+          const uniqueSizes = [...new Set(sizes)].slice(0, 12);
+          console.log(
+            `Found sizes: ${uniqueSizes.join(", ")} from selector: ${selector}`
+          );
+          return uniqueSizes.join(", ");
+        }
+      }
+    }
+  }
+
+  // Try to find sizes in JSON-LD structured data
+  try {
+    const jsonLdScripts = document.querySelectorAll(
+      'script[type="application/ld+json"]'
+    );
+    for (const script of jsonLdScripts) {
+      const data = JSON.parse(script.textContent);
+      if (data && data.offers && Array.isArray(data.offers)) {
+        const sizes = [];
+        for (const offer of data.offers) {
+          if (offer.itemOffered && offer.itemOffered.size) {
+            sizes.push(offer.itemOffered.size);
+          }
+        }
+        if (sizes.length > 0) {
+          console.log(`Found sizes: ${sizes.join(", ")} from JSON-LD`);
+          return sizes.join(", ");
+        }
+      }
+    }
+  } catch (error) {
+    console.log("Error parsing JSON-LD for sizes:", error);
+  }
+
+  // Try to find sizes in meta tags
+  const metaSelectors = [
+    'meta[property="product:size"]',
+    'meta[name="size"]',
+    'meta[property="og:size"]',
+  ];
+
+  for (const selector of metaSelectors) {
+    const element = document.querySelector(selector);
+    if (element && element.content) {
+      const sizes = element.content
+        .split(",")
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0);
       if (sizes.length > 0) {
+        console.log(
+          `Found sizes: ${sizes.join(", ")} from meta tag: ${selector}`
+        );
         return sizes.join(", ");
       }
     }
   }
 
+  console.log("No sizes found, using default");
   return "S, M, L, XL"; // Default sizes
 }
 
@@ -1578,7 +1783,19 @@ function renderCartItems() {
       }" class="cart-item-image" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yMCAyMEg0MFY0MEgyMFYyMFoiIGZpbGw9IiNEMUQ1REIiLz4KPC9zdmc+'">
       <div class="cart-item-details">
         <div class="cart-item-name">${item.name}</div>
-        <div class="cart-item-price">${item.price.toFixed(2)} €</div>
+        <div class="cart-item-info">
+          <div class="cart-item-price">${item.price.toFixed(2)} €</div>
+          ${
+            item.sizes
+              ? `<div class="cart-item-sizes">Tailles: ${item.sizes}</div>`
+              : ""
+          }
+          ${
+            item.brand && item.brand !== "Marque Inconnue"
+              ? `<div class="cart-item-brand">${item.brand}</div>`
+              : ""
+          }
+        </div>
       </div>
       <div class="cart-item-actions">
         <div class="quantity-controls">
@@ -1738,10 +1955,90 @@ async function addItemToCart(productInfo) {
 }
 
 /**
+ * Refresh product information for items in cart
+ */
+async function refreshCartItemInfo() {
+  let hasUpdates = false;
+
+  for (const item of cartItems) {
+    // Only refresh if we have a valid URL and the item is from the current page
+    if (item.url && item.url === window.location.href) {
+      try {
+        // Extract fresh product information
+        const freshInfo = extractProductInfo();
+
+        // Update price if it's different and more reasonable
+        if (
+          freshInfo.price !== item.price &&
+          freshInfo.price > 0 &&
+          freshInfo.price < 10000
+        ) {
+          console.log(
+            `Updating price for ${item.name}: ${item.price} → ${freshInfo.price}`
+          );
+          item.price = freshInfo.price;
+          hasUpdates = true;
+        }
+
+        // Update sizes if they're different and not default
+        if (
+          freshInfo.sizes !== item.sizes &&
+          freshInfo.sizes !== "S, M, L, XL"
+        ) {
+          console.log(
+            `Updating sizes for ${item.name}: ${item.sizes} → ${freshInfo.sizes}`
+          );
+          item.sizes = freshInfo.sizes;
+          hasUpdates = true;
+        }
+
+        // Update brand if it's different and not default
+        if (
+          freshInfo.brand !== item.brand &&
+          freshInfo.brand !== "Marque Inconnue"
+        ) {
+          console.log(
+            `Updating brand for ${item.name}: ${item.brand} → ${freshInfo.brand}`
+          );
+          item.brand = freshInfo.brand;
+          hasUpdates = true;
+        }
+
+        // Update other fields if they're different
+        if (
+          freshInfo.name !== item.name &&
+          freshInfo.name !== "Article de vêtement"
+        ) {
+          item.name = freshInfo.name;
+          hasUpdates = true;
+        }
+
+        if (freshInfo.description !== item.description) {
+          item.description = freshInfo.description;
+          hasUpdates = true;
+        }
+      } catch (error) {
+        console.log(`Error refreshing info for ${item.name}:`, error);
+      }
+    }
+  }
+
+  // Save updated cart if there were changes
+  if (hasUpdates) {
+    await saveToStorage(STORAGE_KEYS.CART_ITEMS, cartItems);
+    console.log("Cart item information refreshed");
+  }
+}
+
+/**
  * Handle cart modal open/close
  */
 function openCartModal() {
   cartModal.classList.remove("hidden");
+
+  // Refresh product information for items in cart
+  refreshCartItemInfo();
+
   renderCartItems();
 
   // Add bounce animation to cart button
