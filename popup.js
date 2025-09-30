@@ -34,6 +34,7 @@ const resultImage = document.getElementById("result-image");
 const downloadButton = document.getElementById("download-btn");
 const buyNowButton = document.getElementById("buy-now-btn");
 const addToCartButton = document.getElementById("add-to-cart-btn");
+const tryInStoreButton = document.getElementById("try-in-store-btn");
 const cartButton = document.getElementById("cart-btn");
 const cartCount = document.getElementById("cart-count");
 const cartModal = document.getElementById("cart-modal");
@@ -1080,6 +1081,18 @@ async function handleAddToCart() {
       addToCartButton.classList.remove("button-error");
     }, 500);
   }
+}
+
+/**
+ * Handles the Try In Store button click
+ */
+function handleTryInStore() {
+  if (!resultImage.src) {
+    setStatus("🖼️ Générez d'abord un essayage pour continuer.");
+    return;
+  }
+
+  setStatus("🏬 Fonctionnalité 'essayer en magasin' bientôt disponible.");
 }
 
 /**
@@ -2241,6 +2254,7 @@ personImageInput.addEventListener("change", handlePersonImageSelection);
 downloadButton.addEventListener("click", handleDownloadImage);
 buyNowButton.addEventListener("click", handleBuyNow);
 addToCartButton.addEventListener("click", handleAddToCart);
+tryInStoreButton?.addEventListener("click", handleTryInStore);
 
 // Cart event listeners
 cartButton.addEventListener("click", openCartModal);

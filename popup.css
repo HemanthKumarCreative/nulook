@@ -775,8 +775,9 @@ body {
 }
 
 /* Base Button Styles */
-.generate-btn, .download-btn, .buy-now-btn, .add-to-cart-btn {
+.generate-btn, .download-btn, .buy-now-btn, .add-to-cart-btn, .try-in-store-btn {
   width: 100%;
+  min-height: 48px;
   padding: var(--space-4) var(--space-6);
   font-size: var(--font-size-base);
   font-weight: 600;
@@ -803,7 +804,7 @@ body {
 
 /* Button Ripple Effect */
 .generate-btn::before, .download-btn::before, .buy-now-btn::before, 
-.add-to-cart-btn::before {
+.add-to-cart-btn::before, .try-in-store-btn::before {
   content: '';
   position: absolute;
   top: 50%;
@@ -818,7 +819,7 @@ body {
 }
 
 .generate-btn:active::before, .download-btn:active::before, .buy-now-btn:active::before,
-.add-to-cart-btn:active::before {
+.add-to-cart-btn:active::before, .try-in-store-btn:active::before {
   width: 300px;
   height: 300px;
 }
@@ -946,6 +947,29 @@ body {
   transition: all 0.1s ease;
 }
 
+/* Try In Store Button */
+.try-in-store-btn {
+  background: transparent;
+  color: var(--warning);
+  border: 2px solid var(--warning);
+  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.1);
+  flex: 1;
+  min-width: 120px;
+}
+
+.try-in-store-btn:hover {
+  transform: translateY(-2px) scale(1.01);
+  box-shadow: 0 6px 20px rgba(245, 158, 11, 0.2);
+  background: rgba(245, 158, 11, 0.05);
+  border-color: #d97706;
+}
+
+.try-in-store-btn:active {
+  transform: translateY(0) scale(0.98);
+  box-shadow: 0 4px 15px rgba(245, 158, 11, 0.15);
+  transition: all 0.1s ease;
+}
+
 /* Secondary Buttons */
 .change-photo-btn, .change-selection-btn {
   background: linear-gradient(135deg, var(--secondary-100) 0%, var(--secondary-200) 100%);
@@ -998,13 +1022,25 @@ body {
 
 /* Button Content */
 .btn-icon {
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-base);
   transition: transform 0.2s ease;
+  width: 1.2em;
+  height: 1.2em;
+  text-align: center;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  vertical-align: middle;
 }
 
 .btn-text {
   font-weight: 500;
   letter-spacing: 0.025em;
+  line-height: 1;
+  display: flex;
+  align-items: center;
 }
 
 .btn-loading {
@@ -1024,7 +1060,8 @@ body {
 .generate-btn:hover .btn-icon,
 .buy-now-btn:hover .btn-icon,
 .add-to-cart-btn:hover .btn-icon,
-.download-btn:hover .btn-icon {
+.download-btn:hover .btn-icon,
+.try-in-store-btn:hover .btn-icon {
   transform: scale(1.1) rotate(5deg);
 }
 
@@ -1300,12 +1337,13 @@ label:focus-visible {
 .generate-btn:focus-visible,
 .buy-now-btn:focus-visible,
 .add-to-cart-btn:focus-visible,
-.download-btn:focus-visible {
-  outline: 3px solid var(--primary);
+.download-btn:focus-visible,
+.try-in-store-btn:focus-visible {
+  outline: 3px solid var(--warning);
   outline-offset: 3px;
   box-shadow: 
-    0 0 0 6px rgba(239, 87, 70, 0.2),
-    0 8px 25px rgba(239, 87, 70, 0.3);
+    0 0 0 6px rgba(245, 158, 11, 0.2),
+    0 8px 25px rgba(245, 158, 11, 0.3);
 }
 
 .clear-cart-btn:focus-visible {
