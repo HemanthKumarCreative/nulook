@@ -26,7 +26,6 @@ const personPreviewImage = document.getElementById("person-preview-image");
 const galleryContainer = document.getElementById("website-images-container");
 const previewContainer = document.getElementById("clothing-preview-container");
 const previewImage = document.getElementById("clothing-preview-image");
-// Remove button reference since we're removing the button
 const generateButton = document.getElementById("generate-btn");
 const statusDiv = document.getElementById("status");
 const resultContainer = document.getElementById("result-container");
@@ -44,13 +43,70 @@ const cartTotalPrice = document.getElementById("cart-total-price");
 const clearCartButton = document.getElementById("clear-cart-btn");
 const checkoutButton = document.getElementById("checkout-btn");
 
+// Error display elements
+const successResult = document.getElementById("success-result");
+const errorResult = document.getElementById("error-result");
+const errorResultMessage = document.getElementById("error-result-message");
+
 // Backend URL (adjust if needed)
-const API_URL = "https://try-on-server-six.vercel.app/api/tryon";
+const API_URL = "http://localhost:3000/api/tryon";
 
 // --- Utility ---
 
 function setStatus(msg) {
   statusDiv.textContent = msg;
+}
+
+/**
+ * Display error message with enhanced inline UI/UX
+ * @param {Object} errorData - Error data from API response
+ * @param {string} errorData.status - Error status
+ * @param {Object} errorData.error_message - Error message object
+ * @param {string} errorData.error_message.code - Error code
+ * @param {string} errorData.error_message.message - Error message
+ */
+function showError(errorData) {
+  // Keep status message visible with error context
+  setStatus("❌ Erreur lors de la génération de votre essayage virtuel");
+
+  // Set user-friendly error message (without technical keys)
+  let errorMessage =
+    errorData.error_message?.message || "Une erreur inattendue s'est produite.";
+
+  // Provide more user-friendly messages for specific error codes
+  const errorCode = errorData.error_message?.code;
+  if (errorCode === "MODEL_TIMEOUT") {
+    errorMessage =
+      "La génération prend plus de temps que prévu. Veuillez réessayer avec des images plus simples ou une meilleure connexion internet.";
+  } else if (errorCode === "MISSING_FILES_ERROR") {
+    errorMessage =
+      "Veuillez vous assurer que vous avez sélectionné à la fois votre photo et un article de vêtement.";
+  } else if (errorCode === "SERVER_ERROR") {
+    errorMessage =
+      "Une erreur technique s'est produite. Veuillez réessayer dans quelques instants.";
+  }
+
+  errorResultMessage.textContent = errorMessage;
+
+  // Show result container with error content
+  resultContainer.classList.remove("hidden");
+  successResult.classList.add("hidden");
+  errorResult.classList.remove("hidden");
+
+  // Add error animation to generate button
+  generateButton.classList.add("button-error");
+  setTimeout(() => {
+    generateButton.classList.remove("button-error");
+  }, 500);
+}
+
+/**
+ * Hide error message and show success result
+ */
+function showSuccessResult() {
+  resultContainer.classList.remove("hidden");
+  errorResult.classList.add("hidden");
+  successResult.classList.remove("hidden");
 }
 
 // --- Storage Utilities ---
@@ -362,7 +418,7 @@ function setBusy(isBusy) {
     generateButton.classList.remove("button-loading");
     btnLoading.classList.add("hidden");
     btnLoading.classList.remove("show");
-    btnText.textContent = "Générer l'Essayage Virtuel";
+    btnText.textContent = "Générer";
     btnIcon.textContent = "⚡";
   }
 }
@@ -2134,6 +2190,12 @@ async function handleFormSubmit(event) {
 
     const data = await apiResponse.json().catch(() => null);
 
+    // Check for error status first (even if HTTP status is not ok)
+    if (data && data.status === "error") {
+      showError(data);
+      return; // Don't throw error, just show the error UI
+    }
+
     if (!apiResponse.ok || !data) {
       const text = await apiResponse.text().catch(() => "");
       throw new Error(
@@ -2143,30 +2205,24 @@ async function handleFormSubmit(event) {
       );
     }
 
-    if (!data.ok) {
-      // Standardized backend error
-      const msg =
-        (data.error && (data.error.message || data.error.code)) ||
-        "Échec de la génération de l'image.";
-      throw new Error(msg);
+    // Check for success status
+    if (data.status === "success" && data.image) {
+      // The image is already a data URL from the backend
+      resultImage.src = data.image;
+
+      // Save the generated image to storage
+      await saveGeneratedImage(data.image);
+
+      // Show success result
+      showSuccessResult();
+
+      setStatus("🎉 Incroyable ! Votre essayage virtuel est prêt !");
+      enableDownload(true);
+    } else if (data.status === "success" && !data.image) {
+      throw new Error("Aucune image générée dans la réponse de succès.");
+    } else {
+      throw new Error("Réponse invalide du serveur.");
     }
-
-    // Step 4: Show the image from base64
-    const mime = data.output?.image?.mimeType || "image/png";
-    const base64 = data.output?.image?.base64;
-    if (!base64) {
-      throw new Error("Aucune image trouvée dans la réponse.");
-    }
-
-    const dataURL = `data:${mime};base64,${base64}`;
-    resultImage.src = dataURL;
-    resultContainer.classList.remove("hidden");
-
-    // Save the generated image to storage
-    await saveGeneratedImage(dataURL);
-
-    setStatus("🎉 Incroyable ! Votre essayage virtuel est prêt !");
-    enableDownload(true);
 
     // Add success animation to generate button
     generateButton.classList.add("button-success");

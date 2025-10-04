@@ -37,7 +37,7 @@ const tryInStoreButton = document.getElementById("try-in-store-btn");
 const minimizeButton = document.getElementById("minimize-btn");
 
 // Backend URL (adjust if needed)
-const API_URL = "https://try-on-server-six.vercel.app/api/tryon";
+const API_URL = "http://localhost:3000/api/tryon";
 
 // --- Utility ---
 
@@ -631,6 +631,36 @@ async function handleFormSubmit(event) {
 
     const data = await apiResponse.json().catch(() => null);
 
+    // Check for error status first (even if HTTP status is not ok)
+    if (data && data.status === "error") {
+      // For fullscreen mode, show user-friendly error message
+      let errorMsg =
+        data.error_message?.message || "Échec de la génération de l'image.";
+
+      // Provide more user-friendly messages for specific error codes
+      const errorCode = data.error_message?.code;
+      if (errorCode === "MODEL_TIMEOUT") {
+        errorMsg =
+          "La génération prend plus de temps que prévu. Veuillez réessayer avec des images plus simples ou une meilleure connexion internet.";
+      } else if (errorCode === "MISSING_FILES_ERROR") {
+        errorMsg =
+          "Veuillez vous assurer que vous avez sélectionné à la fois votre photo et un article de vêtement.";
+      } else if (errorCode === "SERVER_ERROR") {
+        errorMsg =
+          "Une erreur technique s'est produite. Veuillez réessayer dans quelques instants.";
+      }
+
+      setStatus(`❌ ${errorMsg}`);
+
+      // Add error animation to generate button
+      generateButton.classList.add("button-error");
+      setTimeout(() => {
+        generateButton.classList.remove("button-error");
+      }, 500);
+
+      return; // Don't throw error, just show the error message
+    }
+
     if (!apiResponse.ok || !data) {
       const text = await apiResponse.text().catch(() => "");
       throw new Error(
@@ -640,30 +670,22 @@ async function handleFormSubmit(event) {
       );
     }
 
-    if (!data.ok) {
-      // Standardized backend error
-      const msg =
-        (data.error && (data.error.message || data.error.code)) ||
-        "Échec de la génération de l'image.";
-      throw new Error(msg);
+    // Check for success status
+    if (data.status === "success" && data.image) {
+      // The image is already a data URL from the backend
+      resultImage.src = data.image;
+      resultContainer.classList.remove("hidden");
+
+      // Save the generated image to storage
+      await saveGeneratedImage(data.image);
+
+      setStatus("🎉 Incroyable ! Votre essayage virtuel est prêt !");
+      enableDownload(true);
+    } else if (data.status === "success" && !data.image) {
+      throw new Error("Aucune image générée dans la réponse de succès.");
+    } else {
+      throw new Error("Réponse invalide du serveur.");
     }
-
-    // Step 4: Show the image from base64
-    const mime = data.output?.image?.mimeType || "image/png";
-    const base64 = data.output?.image?.base64;
-    if (!base64) {
-      throw new Error("Aucune image trouvée dans la réponse.");
-    }
-
-    const dataURL = `data:${mime};base64,${base64}`;
-    resultImage.src = dataURL;
-    resultContainer.classList.remove("hidden");
-
-    // Save the generated image to storage
-    await saveGeneratedImage(dataURL);
-
-    setStatus("🎉 Incroyable ! Votre essayage virtuel est prêt !");
-    enableDownload(true);
   } catch (error) {
     if (error?.name === "AbortError") {
       setStatus("Demande annulée.");

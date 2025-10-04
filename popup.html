@@ -127,15 +127,18 @@
           </section>
         </div>
 
-        <!-- Generate Button -->
+        <!-- Generate Section -->
         <div class="generate-section">
-          <button type="submit" id="generate-btn" class="generate-btn">
-            <span class="btn-icon">⚡</span>
-            <span class="btn-text">Générer l'Essayage Virtuel</span>
-            <div class="btn-loading hidden">
-              <div class="loading-spinner"></div>
-            </div>
-          </button>
+          <div class="generate-controls">
+            <!-- Generate Button -->
+            <button type="submit" id="generate-btn" class="generate-btn">
+              <span class="btn-icon">⚡</span>
+              <span class="btn-text">Générer</span>
+              <div class="btn-loading hidden">
+                <div class="loading-spinner"></div>
+              </div>
+            </button>
+          </div>
         </div>
       </form>
 
@@ -144,11 +147,12 @@
 
       <!-- Results -->
       <div id="result-container" class="hidden">
-        <div class="result-header">
-          <h3>Votre Résultat d'Essayage Virtuel</h3>
-          <p class="result-subtitle">Voici comment le vêtement vous va !</p>
-        </div>
-        <div class="result-content">
+        <!-- Success Result -->
+        <div id="success-result" class="result-content">
+          <div class="result-header">
+            <h3>Votre Résultat d'Essayage Virtuel</h3>
+            <p class="result-subtitle">Voici comment le vêtement vous va !</p>
+          </div>
           <div class="result-image-container">
             <img
               id="result-image"
@@ -183,6 +187,21 @@
               <span class="btn-icon">📥</span>
               <span class="btn-text">Télécharger</span>
             </button>
+          </div>
+        </div>
+
+        <!-- Error Result -->
+        <div id="error-result" class="error-result-content hidden">
+          <div class="result-header">
+            <h3>Erreur de Génération</h3>
+            <p class="result-subtitle">
+              Nous n'avons pas pu générer votre essayage virtuel
+            </p>
+          </div>
+          <div class="error-result-body">
+            <div class="error-result-message" id="error-result-message">
+              <!-- Error message will be inserted here -->
+            </div>
           </div>
         </div>
       </div>

@@ -774,6 +774,13 @@ body {
   margin: var(--space-5) 0;
 }
 
+/* Generate Controls Layout */
+.generate-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
 /* Base Button Styles */
 .generate-btn, .download-btn, .buy-now-btn, .add-to-cart-btn, .try-in-store-btn {
   width: 100%;
@@ -831,6 +838,9 @@ body {
   border: 2px solid var(--primary);
   box-shadow: 0 4px 14px rgba(206, 0, 3, 0.1);
   position: relative;
+  flex-shrink: 0;
+  min-width: 140px;
+  width: auto;
 }
 
 .generate-btn::after {
@@ -1508,6 +1518,50 @@ button, input, label {
 .status-message:contains("❌") {
   background: var(--error-light);
   border-left-color: var(--error);
+}
+
+/* Inline Error Result Display */
+.error-result-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  animation: errorResultSlideIn 0.5s ease-out;
+}
+
+@keyframes errorResultSlideIn {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.error-result-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.error-result-message {
+  background: linear-gradient(135deg, #fef2f2, #fef7f7);
+  padding: var(--space-3);
+  border-radius: var(--radius-lg);
+  border-left: 4px solid var(--error);
+  font-size: var(--font-size-base);
+  line-height: 1.6;
+  color: var(--gray-800);
+  box-shadow: var(--shadow-sm);
+}
+
+
+/* Responsive design for error result */
+@media (max-width: 768px) {
+  .error-result-content {
+    gap: var(--space-2);
+  }
 }
 
 /* Warning state styling */
