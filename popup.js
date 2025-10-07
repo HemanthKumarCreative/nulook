@@ -31,6 +31,7 @@ const statusDiv = document.getElementById("status");
 const resultContainer = document.getElementById("result-container");
 const resultImage = document.getElementById("result-image");
 const downloadButton = document.getElementById("download-btn");
+const resultDownloadButton = document.getElementById("result-download-btn");
 const buyNowButton = document.getElementById("buy-now-btn");
 const addToCartButton = document.getElementById("add-to-cart-btn");
 const tryInStoreButton = document.getElementById("try-in-store-btn");
@@ -49,7 +50,7 @@ const errorResult = document.getElementById("error-result");
 const errorResultMessage = document.getElementById("error-result-message");
 
 // Backend URL (adjust if needed)
-const API_URL = "http://localhost:3000/api/tryon";
+const API_URL = "http://localhost:3000/api/fashion-photo";
 
 // --- Utility ---
 
@@ -425,6 +426,10 @@ function setBusy(isBusy) {
 
 function enableDownload(enable) {
   downloadButton.disabled = !enable;
+  if (resultDownloadButton) {
+    resultDownloadButton.disabled = !enable;
+    resultDownloadButton.style.display = enable ? "flex" : "none";
+  }
 }
 
 // --- Handlers ---
@@ -1031,6 +1036,61 @@ function addProductDetailsToCollage(
 }
 
 /**
+ * Handles downloading just the generated result image (single image).
+ */
+async function handleDownloadResultImage() {
+  if (!resultImage.src) {
+    setStatus("Aucune image à télécharger.");
+    return;
+  }
+
+  try {
+    setStatus("📥 Téléchargement de votre image...");
+
+    // Add visual feedback to the result download button only
+    if (resultDownloadButton) {
+      resultDownloadButton.classList.add("button-loading");
+      resultDownloadButton.disabled = true;
+    }
+
+    // Create download link for the single result image
+    const link = document.createElement("a");
+    link.href = resultImage.src;
+    link.download = `nusense-tryon-result-${Date.now()}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    setStatus(
+      "💾 Image téléchargée avec succès ! Vérifiez votre dossier de téléchargements."
+    );
+
+    // Add success animation to result download button only
+    if (resultDownloadButton) {
+      resultDownloadButton.classList.remove("button-loading");
+      resultDownloadButton.classList.add("button-success");
+      setTimeout(() => {
+        resultDownloadButton.classList.remove("button-success");
+        resultDownloadButton.disabled = false;
+      }, 600);
+    }
+  } catch (error) {
+    console.error("Download failed:", error);
+    setStatus("❌ Échec du téléchargement. Veuillez réessayer.");
+
+    // Reset button state on error
+    if (resultDownloadButton) {
+      resultDownloadButton.classList.remove("button-loading");
+      resultDownloadButton.classList.add("button-error");
+      setTimeout(() => {
+        resultDownloadButton.classList.remove("button-error");
+        resultDownloadButton.disabled = false;
+      }, 500);
+    }
+  }
+}
+
+/**
  * Handles downloading the generated collage with all images and product details.
  */
 async function handleDownloadImage() {
@@ -1041,6 +1101,17 @@ async function handleDownloadImage() {
 
   try {
     setStatus("🎨 Création de votre collage personnalisé...");
+
+    // Add visual feedback to download buttons
+    const downloadButtons = [downloadButton];
+    if (resultDownloadButton) {
+      downloadButtons.push(resultDownloadButton);
+    }
+
+    downloadButtons.forEach((btn) => {
+      btn.classList.add("button-loading");
+      btn.disabled = true;
+    });
 
     // Create the collage
     const collageDataUrl = await createCollage();
@@ -1056,9 +1127,34 @@ async function handleDownloadImage() {
     setStatus(
       "💾 Collage téléchargé avec succès ! Vérifiez votre dossier de téléchargements."
     );
+
+    // Add success animation
+    downloadButtons.forEach((btn) => {
+      btn.classList.remove("button-loading");
+      btn.classList.add("button-success");
+      setTimeout(() => {
+        btn.classList.remove("button-success");
+        btn.disabled = false;
+      }, 600);
+    });
   } catch (error) {
     console.error("Download failed:", error);
     setStatus("❌ Échec du téléchargement. Veuillez réessayer.");
+
+    // Reset button states on error
+    const downloadButtons = [downloadButton];
+    if (resultDownloadButton) {
+      downloadButtons.push(resultDownloadButton);
+    }
+
+    downloadButtons.forEach((btn) => {
+      btn.classList.remove("button-loading");
+      btn.classList.add("button-error");
+      setTimeout(() => {
+        btn.classList.remove("button-error");
+        btn.disabled = false;
+      }, 500);
+    });
   }
 }
 
@@ -2177,7 +2273,7 @@ async function handleFormSubmit(event) {
     const formData = new FormData();
     formData.append("personImage", personImageInput.files[0]);
     // Give the blob a filename so the server's 'multer' can process it
-    formData.append("itemImage", clothingBlob, "clothing-item.jpg");
+    formData.append("clothingImage", clothingBlob, "clothing-item.jpg");
 
     // Step 3: Send to the backend (expects JSON response)
     setStatus("💫 Laissez-nous faire la magie... Cela peut prendre un moment.");
@@ -2308,6 +2404,15 @@ async function restorePreviousSession() {
 form.addEventListener("submit", handleFormSubmit);
 personImageInput.addEventListener("change", handlePersonImageSelection);
 downloadButton.addEventListener("click", handleDownloadImage);
+if (resultDownloadButton) {
+  resultDownloadButton.addEventListener("click", handleDownloadResultImage);
+  resultDownloadButton.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      handleDownloadResultImage();
+    }
+  });
+}
 buyNowButton.addEventListener("click", handleBuyNow);
 addToCartButton.addEventListener("click", handleAddToCart);
 tryInStoreButton?.addEventListener("click", handleTryInStore);

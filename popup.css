@@ -1132,6 +1132,8 @@ body {
 .result-image-container {
   text-align: center;
   margin-bottom: var(--space-4);
+  position: relative;
+  display: block;
 }
 
 .result-image-container img {
@@ -1139,6 +1141,122 @@ body {
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-xl);
   border: 3px solid var(--primary);
+}
+
+/* Small download icon button */
+.result-download-btn {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  box-shadow: var(--shadow-md);
+  backdrop-filter: blur(8px);
+  z-index: 10;
+  color: var(--secondary-600);
+  opacity: 0.8;
+  pointer-events: auto;
+}
+
+.result-download-btn:hover {
+  background: rgba(255, 255, 255, 1);
+  border-color: var(--primary);
+  color: var(--primary);
+  transform: scale(1.1);
+  box-shadow: var(--shadow-lg);
+  opacity: 1;
+}
+
+.result-download-btn:active {
+  transform: scale(0.95);
+  transition: all 0.1s ease;
+}
+
+.result-download-btn:focus {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.result-download-btn:focus:not(:focus-visible) {
+  outline: none;
+}
+
+.result-download-btn .download-icon {
+  transition: transform var(--transition-fast);
+}
+
+.result-download-btn:hover .download-icon {
+  transform: translateY(-1px);
+}
+
+.result-download-btn:active .download-icon {
+  transform: translateY(0);
+}
+
+/* Animation for when the download button appears */
+.result-download-btn {
+  animation: fadeInScale 0.3s ease-out;
+}
+
+@keyframes fadeInScale {
+  0% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  100% {
+    opacity: 0.8;
+    transform: scale(1);
+  }
+}
+
+/* Button state classes for download button */
+.result-download-btn.button-loading {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.result-download-btn.button-loading .download-icon {
+  animation: spin 1s linear infinite;
+}
+
+.result-download-btn.button-success {
+  background: var(--success-light);
+  color: var(--success);
+  border-color: var(--success);
+}
+
+.result-download-btn.button-error {
+  background: var(--error-light);
+  color: var(--error);
+  border-color: var(--error);
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  .result-download-btn {
+    width: 36px;
+    height: 36px;
+    top: var(--space-2);
+    right: var(--space-2);
+  }
+  
+  .result-download-btn .download-icon {
+    width: 18px;
+    height: 18px;
+  }
 }
 
 .result-content {
