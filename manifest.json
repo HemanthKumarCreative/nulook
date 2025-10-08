@@ -4,16 +4,24 @@
   "version": "2.0",
   "description": "Transformez votre style avec l'essayage virtuel alimenté par IA. Sélectionnez des vêtements de n'importe quel site web et voyez comment ils vous vont instantanément.",
   "icons": {
-    "16": "NUSENSE_LOGO.svg",
-    "48": "NUSENSE_LOGO.svg",
-    "128": "NUSENSE_LOGO.svg"
+    "16": "icons/16.png",
+    "20": "icons/20.png",
+    "29": "icons/29.png",
+    "32": "icons/32.png",
+    "40": "icons/40.png",
+    "48": "icons/48.png",
+    "50": "icons/50.png"
   },
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
-      "16": "NUSENSE_LOGO.svg",
-      "48": "NUSENSE_LOGO.svg",
-      "128": "NUSENSE_LOGO.svg"
+      "16": "icons/16.png",
+      "20": "icons/20.png",
+      "29": "icons/29.png",
+      "32": "icons/32.png",
+      "40": "icons/40.png",
+      "48": "icons/48.png",
+      "50": "icons/50.png"
     }
   },
   "permissions": ["activeTab", "scripting", "storage"],
