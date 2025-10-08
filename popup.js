@@ -52,7 +52,7 @@ const errorResult = document.getElementById("error-result");
 const errorResultMessage = document.getElementById("error-result-message");
 
 // Backend URL (adjust if needed)
-const API_URL = "https://try-on-server-v1.vercel.app/api/fashion-photo";
+const API_URL = "http://localhost:3000/api/fashion-photo";
 
 // --- Utility ---
 
