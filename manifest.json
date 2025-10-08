@@ -17,5 +17,9 @@
     }
   },
   "permissions": ["activeTab", "scripting", "storage"],
-  "host_permissions": ["http://localhost:3000/*", "http://*/*", "https://*/*"]
+  "host_permissions": [
+    "https://try-on-server-v1.vercel.app/*",
+    "http://*/*",
+    "https://*/*"
+  ]
 }

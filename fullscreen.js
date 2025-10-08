@@ -37,7 +37,7 @@ const tryInStoreButton = document.getElementById("try-in-store-btn");
 const minimizeButton = document.getElementById("minimize-btn");
 
 // Backend URL (adjust if needed)
-const API_URL = "http://localhost:3000/api/tryon";
+const API_URL = "https://try-on-server-v1.vercel.app/api/tryon";
 
 // --- Utility ---
 
