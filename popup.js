@@ -23,9 +23,11 @@ const personPreviewContainer = document.getElementById(
   "person-preview-container"
 );
 const personPreviewImage = document.getElementById("person-preview-image");
+const personFilePickerBtn = document.getElementById("person-file-picker-btn");
 const galleryContainer = document.getElementById("website-images-container");
 const previewContainer = document.getElementById("clothing-preview-container");
 const previewImage = document.getElementById("clothing-preview-image");
+const clothingSelectionBtn = document.getElementById("clothing-selection-btn");
 const generateButton = document.getElementById("generate-btn");
 const statusDiv = document.getElementById("status");
 const resultContainer = document.getElementById("result-container");
@@ -473,22 +475,11 @@ async function handlePersonImageSelection() {
 }
 
 /**
- * Handles clicking on the person preview to change selection
+ * Handles clicking on the person file picker button to change selection
  */
 async function handlePersonPreviewClick() {
-  // Reset selection
-  personImageInput.value = "";
-  personPreviewImage.src = "";
-
-  // Update UI
-  personPreviewContainer.classList.add("hidden");
-  document.getElementById("person-upload-container").classList.remove("hidden");
-
-  // Clear the uploaded image from storage
-  await clearStorageKey(STORAGE_KEYS.UPLOADED_IMAGE);
-
-  // Update layout state
-  updateGenerateButtonState();
+  // Trigger the file input dialog
+  personImageInput.click();
 }
 
 /**
@@ -558,7 +549,7 @@ async function handleImageSelection(url) {
 }
 
 /**
- * Handles clicking on the clothing preview to change selection
+ * Handles clicking on the clothing selection button to change selection
  */
 async function handleClothingPreviewClick() {
   // Reset selection
@@ -2503,9 +2494,26 @@ document.addEventListener("DOMContentLoaded", async () => {
     updateCartCount();
   }
 
-  // Add click event listeners for preview images
-  previewImage.addEventListener("click", handleClothingPreviewClick);
-  personPreviewImage.addEventListener("click", handlePersonPreviewClick);
+  // Add click event listeners for preview action buttons
+  if (clothingSelectionBtn) {
+    clothingSelectionBtn.addEventListener("click", handleClothingPreviewClick);
+    clothingSelectionBtn.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        handleClothingPreviewClick();
+      }
+    });
+  }
+
+  if (personFilePickerBtn) {
+    personFilePickerBtn.addEventListener("click", handlePersonPreviewClick);
+    personFilePickerBtn.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        handlePersonPreviewClick();
+      }
+    });
+  }
 
   // Set initial state - show upload container if no image is selected
   if (!personImageInput.files.length) {
