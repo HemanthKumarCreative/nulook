@@ -24,10 +24,17 @@
       "50": "icons/50.png"
     }
   },
-  "permissions": ["activeTab", "scripting", "storage"],
+  "permissions": ["activeTab", "scripting", "storage", "identity"],
   "host_permissions": [
-    "https://try-on-server-v1.vercel.app/*",
+    "https://try-on-server-v1-production.up.railway.app/*",
+    "https://accounts.google.com/*",
+    "https://www.googleapis.com/*",
+    "https://oauth2.googleapis.com/*",
     "http://*/*",
     "https://*/*"
-  ]
+  ],
+  "oauth2": {
+    "client_id": "294135365335-5armli6j0qscqijf3rtjcn0ekmalgmm3.apps.googleusercontent.com",
+    "scopes": ["openid", "email", "profile"]
+  }
 }

@@ -5,6 +5,7 @@ let selectedClothingUrl = null;
 let inFlightController = null;
 let cartItems = [];
 let currentProductInfo = null;
+let currentUser = null;
 
 // --- Storage Keys ---
 const STORAGE_KEYS = {
@@ -14,6 +15,7 @@ const STORAGE_KEYS = {
   LAST_SESSION_DATA: "nusense_tryon_last_session",
   CART_ITEMS: "nusense_tryon_cart_items",
   PRODUCT_INFO: "nusense_tryon_product_info",
+  USER_AUTH: "nusense_tryon_user_auth",
 };
 
 // --- DOM Elements ---
@@ -51,8 +53,22 @@ const successResult = document.getElementById("success-result");
 const errorResult = document.getElementById("error-result");
 const errorResultMessage = document.getElementById("error-result-message");
 
+// Google Sign-In elements
+const userProfile = document.getElementById("user-profile");
+const userAvatar = document.getElementById("user-avatar");
+const userAvatarFallback = document.getElementById("user-avatar-fallback");
+const userName = document.getElementById("user-name");
+const userEmail = document.getElementById("user-email");
+const signoutBtn = document.getElementById("signout-btn");
+
+// Authentication gate elements
+const authGate = document.getElementById("auth-gate");
+const mainContent = document.getElementById("main-content");
+const authGateSigninBtn = document.getElementById("auth-gate-signin-btn");
+
 // Backend URL (adjust if needed)
-const API_URL = "https://try-on-server-v1.vercel.app/api/fashion-photo";
+const API_URL =
+  "https://try-on-server-v1-production.up.railway.app/api/fashion-photo";
 
 // --- Utility ---
 
@@ -432,6 +448,426 @@ function enableDownload(enable) {
     resultDownloadButton.disabled = !enable;
     resultDownloadButton.style.display = enable ? "flex" : "none";
   }
+}
+
+// --- Google Sign-In Authentication ---
+
+/**
+ * Initialize Google Sign-In authentication
+ */
+async function initializeGoogleAuth() {
+  try {
+    // Check if user is already authenticated
+    const savedUser = await loadFromStorage(STORAGE_KEYS.USER_AUTH);
+    if (savedUser && savedUser.accessToken) {
+      // Verify token is still valid
+      const isValid = await verifyGoogleToken(savedUser.accessToken);
+      if (isValid) {
+        currentUser = savedUser;
+        updateUserInterface(true);
+        return;
+      } else {
+        // Token expired, clear saved user
+        await clearStorageKey(STORAGE_KEYS.USER_AUTH);
+      }
+    }
+
+    // Show sign-in interface
+    updateUserInterface(false);
+  } catch (error) {
+    console.error("Failed to initialize Google auth:", error);
+    updateUserInterface(false);
+  }
+}
+
+/**
+ * Handle Google Sign-In button click
+ */
+async function handleGoogleSignIn() {
+  try {
+    setStatus("🔐 Connexion avec Google...");
+
+    // Disable sign-in button during authentication
+    authGateSigninBtn.disabled = true;
+
+    // Launch Google OAuth flow
+    console.log("Calling chrome.identity.getAuthToken...");
+    const token = await chrome.identity.getAuthToken({ interactive: true });
+
+    console.log("Received token type:", typeof token);
+    console.log("Received token value:", token);
+    console.log("Token is string:", typeof token === "string");
+    console.log("Token constructor:", token?.constructor?.name);
+    console.log("Token JSON:", JSON.stringify(token));
+
+    // Ensure we have a valid token string
+    let validToken = null;
+    if (typeof token === "string") {
+      validToken = token;
+    } else if (token && typeof token === "object") {
+      // If token is an object, try to extract the string value
+      console.log("Token is object, attempting to extract value");
+      console.log("Token object keys:", Object.keys(token));
+      console.log("Token object values:", Object.values(token));
+
+      // Try different ways to extract the token
+      if (token.token) {
+        validToken = token.token;
+      } else if (token.access_token) {
+        validToken = token.access_token;
+      } else if (token.accessToken) {
+        validToken = token.accessToken;
+      } else {
+        // Last resort: try to stringify and parse
+        try {
+          const tokenStr = JSON.stringify(token);
+          console.log("Token as JSON string:", tokenStr);
+          // If it's a simple object with one property, extract it
+          const parsed = JSON.parse(tokenStr);
+          const firstKey = Object.keys(parsed)[0];
+          validToken = parsed[firstKey];
+        } catch (e) {
+          console.error("Failed to extract token from object:", e);
+          validToken = null;
+        }
+      }
+    }
+
+    console.log("Valid token:", validToken);
+    console.log("Valid token type:", typeof validToken);
+
+    if (validToken && typeof validToken === "string" && validToken.length > 0) {
+      // Additional validation: ensure token looks like a real Google token
+      if (
+        validToken.startsWith("ya29.") ||
+        validToken.startsWith("1//") ||
+        validToken.length > 50
+      ) {
+        console.log("Token appears to be valid Google token");
+        // Get user profile information
+        const userInfo = await fetchGoogleUserInfo(validToken);
+
+        if (userInfo) {
+          // Save user data
+          currentUser = {
+            accessToken: validToken,
+            id: userInfo.id,
+            email: userInfo.email,
+            name: userInfo.name,
+            picture: userInfo.picture,
+            loginTime: Date.now(),
+          };
+
+          await saveToStorage(STORAGE_KEYS.USER_AUTH, currentUser);
+          updateUserInterface(true);
+
+          setStatus("✅ Connexion réussie ! Bienvenue, " + userInfo.name);
+
+          // Clear status after a few seconds
+          setTimeout(() => {
+            if (statusDiv.textContent.includes("Connexion réussie")) {
+              setStatus("");
+            }
+          }, 3000);
+        } else {
+          throw new Error("Failed to fetch user information");
+        }
+      } else {
+        console.error(
+          "Token doesn't appear to be a valid Google token:",
+          validToken
+        );
+        throw new Error("Invalid Google token format");
+      }
+    } else if (token && typeof token !== "string") {
+      throw new Error("Invalid token format received");
+    } else {
+      throw new Error("No access token received");
+    }
+  } catch (error) {
+    console.error("Google Sign-In error:", error);
+    setStatus("❌ Échec de la connexion. Veuillez réessayer.");
+
+    // Re-enable sign-in button on error
+    authGateSigninBtn.disabled = false;
+
+    // Clear status after a few seconds
+    setTimeout(() => {
+      if (statusDiv.textContent.includes("Échec de la connexion")) {
+        setStatus("");
+      }
+    }, 3000);
+  }
+}
+
+/**
+ * Handle Google Sign-Out
+ */
+async function handleGoogleSignOut() {
+  try {
+    setStatus("👋 Déconnexion en cours...");
+
+    // Re-enable sign-in button immediately
+    authGateSigninBtn.disabled = false;
+
+    if (currentUser && currentUser.accessToken) {
+      // Revoke the access token with Google
+      try {
+        const revokeResponse = await fetch(
+          `https://oauth2.googleapis.com/revoke?token=${encodeURIComponent(
+            currentUser.accessToken
+          )}`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/x-www-form-urlencoded",
+            },
+          }
+        );
+
+        if (revokeResponse.ok) {
+          console.log("Token successfully revoked with Google");
+        } else {
+          console.warn(
+            "Failed to revoke token with Google, but continuing with logout"
+          );
+        }
+      } catch (revokeError) {
+        console.warn("Error revoking token with Google:", revokeError);
+        // Continue with logout even if revocation fails
+      }
+
+      // Remove cached token from Chrome
+      try {
+        await chrome.identity.removeCachedAuthToken({
+          token: currentUser.accessToken,
+        });
+        console.log("Token removed from Chrome cache");
+      } catch (cacheError) {
+        console.warn("Error removing token from Chrome cache:", cacheError);
+        // Continue with logout even if cache removal fails
+      }
+    }
+
+    // Clear user data
+    currentUser = null;
+    await clearStorageKey(STORAGE_KEYS.USER_AUTH);
+
+    // Update UI
+    updateUserInterface(false);
+
+    // Reset all button states
+    resetButtonStates();
+
+    setStatus("👋 Déconnexion réussie !");
+
+    // Clear status after a few seconds
+    setTimeout(() => {
+      if (statusDiv.textContent.includes("Déconnexion réussie")) {
+        setStatus("");
+      }
+    }, 2000);
+  } catch (error) {
+    console.error("Google Sign-Out error:", error);
+    setStatus("❌ Erreur lors de la déconnexion.");
+  }
+}
+
+/**
+ * Fetch user information from Google API
+ */
+async function fetchGoogleUserInfo(accessToken) {
+  try {
+    console.log("fetchGoogleUserInfo - Access token type:", typeof accessToken);
+    console.log("fetchGoogleUserInfo - Access token value:", accessToken);
+    console.log(
+      "fetchGoogleUserInfo - Access token length:",
+      accessToken?.length
+    );
+
+    // Ensure we have a valid token string
+    if (!accessToken || typeof accessToken !== "string") {
+      console.error(
+        "Invalid access token provided to fetchGoogleUserInfo:",
+        accessToken
+      );
+      throw new Error("Invalid access token provided");
+    }
+
+    // Additional check to ensure it's not [object Object]
+    if (
+      accessToken === "[object Object]" ||
+      accessToken.includes("object Object")
+    ) {
+      console.error("Token is [object Object], cannot proceed");
+      throw new Error("Token is not a valid string");
+    }
+
+    // First, try to get token info to validate the token
+    const apiUrl = `https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=${encodeURIComponent(
+      accessToken
+    )}`;
+    console.log("Making API call to:", apiUrl);
+    console.log("Encoded token:", encodeURIComponent(accessToken));
+
+    const tokenResponse = await fetch(apiUrl);
+
+    console.log("Token info response status:", tokenResponse.status);
+
+    if (!tokenResponse.ok) {
+      const errorText = await tokenResponse.text();
+      console.error("Token validation error:", errorText);
+      throw new Error(
+        `Token validation failed: ${tokenResponse.status} - ${errorText}`
+      );
+    }
+
+    const tokenInfo = await tokenResponse.json();
+    console.log("Token info received:", tokenInfo);
+
+    // Create user info from token info (more reliable for Chrome extensions)
+    console.log("Creating user info from token");
+
+    // Generate a more user-friendly name from email
+    const emailPrefix = tokenInfo.email.split("@")[0];
+    const displayName = emailPrefix
+      .replace(/[._]/g, " ")
+      .replace(/\b\w/g, (l) => l.toUpperCase());
+
+    const userInfo = {
+      id: tokenInfo.user_id,
+      email: tokenInfo.email,
+      name: displayName,
+      picture: `https://ui-avatars.com/api/?name=${encodeURIComponent(
+        displayName
+      )}&background=random&color=fff&size=200`,
+    };
+    console.log("User info created:", userInfo);
+    return userInfo;
+  } catch (error) {
+    console.error("Failed to fetch user info:", error);
+    return null;
+  }
+}
+
+/**
+ * Verify if Google token is still valid
+ */
+async function verifyGoogleToken(accessToken) {
+  try {
+    // Ensure we have a valid token string
+    if (!accessToken || typeof accessToken !== "string") {
+      console.error("Invalid access token for verification");
+      return false;
+    }
+
+    const response = await fetch(
+      `https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=${encodeURIComponent(
+        accessToken
+      )}`
+    );
+    return response.ok;
+  } catch (error) {
+    console.error("Token verification failed:", error);
+    return false;
+  }
+}
+
+/**
+ * Update user avatar with fallback
+ */
+function updateUserAvatar(avatarUrl, userName) {
+  if (avatarUrl && avatarUrl.trim() !== "") {
+    // Show avatar image
+    userAvatar.src = avatarUrl;
+    userAvatar.alt = userName || "Avatar utilisateur";
+    userAvatar.classList.remove("hidden");
+    userAvatarFallback.classList.add("hidden");
+  } else {
+    // Show fallback icon
+    userAvatar.classList.add("hidden");
+    userAvatarFallback.classList.remove("hidden");
+  }
+}
+
+/**
+ * Update user interface based on authentication state
+ */
+function updateUserInterface(isAuthenticated) {
+  if (isAuthenticated && currentUser) {
+    // Show main content and hide auth gate
+    authGate.classList.add("hidden");
+    mainContent.classList.remove("hidden");
+
+    // Show user profile in header
+    userProfile.classList.remove("hidden");
+
+    // Update user information
+    updateUserAvatar(currentUser.picture, currentUser.name);
+    userName.textContent = currentUser.name || "Utilisateur";
+    userEmail.textContent = currentUser.email || "";
+  } else {
+    // Show auth gate and hide main content
+    authGate.classList.remove("hidden");
+    mainContent.classList.add("hidden");
+
+    // Hide user profile
+    userProfile.classList.add("hidden");
+
+    // Re-enable sign-in button when showing unauthenticated state
+    authGateSigninBtn.disabled = false;
+  }
+}
+
+/**
+ * Get current user information
+ */
+function getCurrentUser() {
+  return currentUser;
+}
+
+/**
+ * Check if user is authenticated
+ */
+function isUserAuthenticated() {
+  return currentUser !== null && currentUser.accessToken !== null;
+}
+
+/**
+ * Reset all button states to enabled
+ */
+function resetButtonStates() {
+  // Re-enable sign-in button
+  authGateSigninBtn.disabled = false;
+
+  // Re-enable other buttons that might be disabled
+  generateButton.disabled = false;
+  addToCartButton.disabled = false;
+  buyNowButton.disabled = false;
+
+  console.log("All button states reset to enabled");
+}
+
+/**
+ * Test logout functionality
+ */
+async function testLogout() {
+  console.log("Testing logout functionality...");
+  console.log("Before logout - isAuthenticated:", isUserAuthenticated());
+  console.log("Before logout - currentUser:", currentUser);
+
+  await handleGoogleSignOut();
+
+  // Wait a moment for logout to complete
+  setTimeout(() => {
+    console.log("After logout - isAuthenticated:", isUserAuthenticated());
+    console.log("After logout - currentUser:", currentUser);
+
+    // Check storage
+    chrome.storage.local.get([STORAGE_KEYS.USER_AUTH]).then((result) => {
+      console.log("After logout - storage:", result);
+    });
+  }, 1000);
 }
 
 // --- Handlers ---
@@ -1030,6 +1466,14 @@ function addProductDetailsToCollage(
  * Handles downloading just the generated result image (single image).
  */
 async function handleDownloadResultImage() {
+  // Check if user is authenticated
+  if (!isUserAuthenticated()) {
+    setStatus(
+      "🔐 Veuillez vous connecter avec Google pour télécharger des images."
+    );
+    return;
+  }
+
   if (!resultImage.src) {
     setStatus("Aucune image à télécharger.");
     return;
@@ -1085,6 +1529,14 @@ async function handleDownloadResultImage() {
  * Handles downloading the generated collage with all images and product details.
  */
 async function handleDownloadImage() {
+  // Check if user is authenticated
+  if (!isUserAuthenticated()) {
+    setStatus(
+      "🔐 Veuillez vous connecter avec Google pour télécharger des images."
+    );
+    return;
+  }
+
   if (!resultImage.src) {
     setStatus("Aucune image à télécharger.");
     return;
@@ -1153,6 +1605,14 @@ async function handleDownloadImage() {
  * Handles the Buy Now button click
  */
 function handleBuyNow() {
+  // Check if user is authenticated
+  if (!isUserAuthenticated()) {
+    setStatus(
+      "🔐 Veuillez vous connecter avec Google pour effectuer un achat."
+    );
+    return;
+  }
+
   if (!selectedClothingUrl) {
     setStatus("📸 Veuillez d'abord sélectionner un article de vêtement.");
     return;
@@ -1176,6 +1636,14 @@ function handleBuyNow() {
  * Handles the Add to Cart button click
  */
 async function handleAddToCart() {
+  // Check if user is authenticated
+  if (!isUserAuthenticated()) {
+    setStatus(
+      "🔐 Veuillez vous connecter avec Google pour ajouter des articles au panier."
+    );
+    return;
+  }
+
   if (!selectedClothingUrl) {
     setStatus("📸 Veuillez d'abord sélectionner un article de vêtement.");
     return;
@@ -2190,6 +2658,12 @@ async function refreshCartItemInfo() {
  * Handle cart modal open/close
  */
 function openCartModal() {
+  // Check if user is authenticated
+  if (!isUserAuthenticated()) {
+    setStatus("🔐 Veuillez vous connecter avec Google pour accéder au panier.");
+    return;
+  }
+
   cartModal.classList.remove("hidden");
 
   // Refresh product information for items in cart
@@ -2233,6 +2707,14 @@ async function handleCheckout() {
 async function handleFormSubmit(event) {
   event.preventDefault();
 
+  // Check if user is authenticated
+  if (!isUserAuthenticated()) {
+    setStatus(
+      "🔐 Veuillez vous connecter avec Google pour utiliser cette fonctionnalité."
+    );
+    return;
+  }
+
   if (!personImageInput.files[0] || !selectedClothingUrl) {
     setStatus(
       "📸 Veuillez télécharger votre photo et sélectionner un article de vêtement pour continuer."
@@ -2265,6 +2747,13 @@ async function handleFormSubmit(event) {
     formData.append("personImage", personImageInput.files[0]);
     // Give the blob a filename so the server's 'multer' can process it
     formData.append("clothingImage", clothingBlob, "clothing-item.jpg");
+
+    // Add user information if authenticated
+    if (isUserAuthenticated()) {
+      formData.append("userId", currentUser.id);
+      formData.append("email", currentUser.email);
+      formData.append("name", currentUser.name);
+    }
 
     // Step 3: Send to the backend (expects JSON response)
     setStatus("💫 Laissez-nous faire la magie... Cela peut prendre un moment.");
@@ -2408,6 +2897,23 @@ buyNowButton.addEventListener("click", handleBuyNow);
 addToCartButton.addEventListener("click", handleAddToCart);
 tryInStoreButton?.addEventListener("click", handleTryInStore);
 
+// Authentication gate sign-in button
+authGateSigninBtn.addEventListener("click", handleGoogleSignIn);
+authGateSigninBtn.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" || e.key === " ") {
+    e.preventDefault();
+    handleGoogleSignIn();
+  }
+});
+
+signoutBtn.addEventListener("click", handleGoogleSignOut);
+signoutBtn.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" || e.key === " ") {
+    e.preventDefault();
+    handleGoogleSignOut();
+  }
+});
+
 // Cart event listeners
 cartButton.addEventListener("click", openCartModal);
 closeCartModal.addEventListener("click", closeCartModalHandler);
@@ -2525,6 +3031,14 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // Restore saved data from previous session
   await restorePreviousSession();
+
+  // Initialize Google authentication
+  await initializeGoogleAuth();
+
+  // Ensure proper initial state - show auth gate by default
+  if (!isUserAuthenticated()) {
+    updateUserInterface(false);
+  }
 
   // Find the current active tab
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
