@@ -68,7 +68,7 @@ const authGateSigninBtn = document.getElementById("auth-gate-signin-btn");
 
 // Backend URL (adjust if needed)
 const API_URL =
-  "https://try-on-server-v1-production.up.railway.app/api/fashion-photo";
+  "https://try-on-server-v1-294135365335.europe-west9.run.app/api/fashion-photo";
 
 // --- Utility ---
 
