@@ -30,7 +30,6 @@
     "https://accounts.google.com/*",
     "https://www.googleapis.com/*",
     "https://oauth2.googleapis.com/*",
-    "http://*/*",
     "https://*/*"
   ],
   "oauth2": {
