@@ -2926,6 +2926,10 @@ async function handleFormSubmit(event) {
 
     const apiResponse = await fetch(API_URL, {
       method: "POST",
+      headers: {
+        "Accept-Language": "fr-FR,fr;q=0.9,en;q=0.8",
+        "Content-Language": "fr",
+      },
       body: formData,
       signal: inFlightController.signal,
     });
