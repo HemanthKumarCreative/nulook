@@ -418,21 +418,8 @@ async function fetchImageWithCorsHandling(url, signal) {
   );
 }
 
-// Loading animation types
-const LOADING_ANIMATIONS = {
-  PULSING_DOTS: "pulsing-dots",
-  WAVE: "wave-loading",
-  SPINNER: "loading-spinner",
-  PROGRESS: "loading-progress",
-  PULSE: "loading-pulse",
-  GLOW: "loading-glow",
-  BREATHING: "breathing-loading",
-  GRADIENT: "gradient-loading",
-  MORPHING: "morphing-button",
-};
-
-// Current loading animation type
-let currentLoadingType = LOADING_ANIMATIONS.PULSING_DOTS;
+// Loading animation type - using only one consistent animation
+const LOADING_ANIMATION = "loading-pulse";
 
 // Loading messages for different stages
 const LOADING_MESSAGES = [
@@ -458,14 +445,9 @@ function setBusy(isBusy) {
   const btnIcon = generateButton.querySelector(".btn-icon");
 
   if (isBusy) {
-    // Remove all previous loading classes
-    Object.values(LOADING_ANIMATIONS).forEach((animation) => {
-      generateButton.classList.remove(animation);
-    });
-
-    // Add current loading animation
+    // Add loading animation
     generateButton.classList.add("button-loading");
-    generateButton.classList.add(currentLoadingType);
+    generateButton.classList.add(LOADING_ANIMATION);
 
     // Show loading content
     btnLoading.classList.remove("hidden");
@@ -480,15 +462,23 @@ function setBusy(isBusy) {
 
     // Start progress tracking
     startProgressTracking();
-
-    // Cycle through different loading animations
-    cycleLoadingAnimations();
   } else {
-    // Remove all loading classes
+    // Remove all loading classes and animations
     generateButton.classList.remove("button-loading");
-    Object.values(LOADING_ANIMATIONS).forEach((animation) => {
-      generateButton.classList.remove(animation);
-    });
+    generateButton.classList.remove(LOADING_ANIMATION);
+
+    // Remove any other animation classes that might be present
+    generateButton.classList.remove(
+      "pulsing-dots",
+      "wave-loading",
+      "loading-spinner",
+      "loading-progress",
+      "loading-pulse",
+      "loading-glow",
+      "breathing-loading",
+      "gradient-loading",
+      "morphing-button"
+    );
 
     // Hide loading content
     btnLoading.classList.add("hidden");
@@ -526,43 +516,7 @@ function stopLoadingMessages() {
   }
 }
 
-function cycleLoadingAnimations() {
-  const animations = [
-    LOADING_ANIMATIONS.PULSING_DOTS,
-    LOADING_ANIMATIONS.WAVE,
-    LOADING_ANIMATIONS.PROGRESS,
-    LOADING_ANIMATIONS.PULSE,
-    LOADING_ANIMATIONS.GLOW,
-    LOADING_ANIMATIONS.BREATHING,
-    LOADING_ANIMATIONS.GRADIENT,
-  ];
-
-  let animationIndex = 0;
-
-  const animationInterval = setInterval(() => {
-    // Remove current animation
-    generateButton.classList.remove(currentLoadingType);
-
-    // Move to next animation
-    animationIndex = (animationIndex + 1) % animations.length;
-    currentLoadingType = animations[animationIndex];
-
-    // Add new animation
-    generateButton.classList.add(currentLoadingType);
-
-    // Stop cycling if button is no longer busy
-    if (!generateButton.disabled) {
-      clearInterval(animationInterval);
-    }
-  }, 4000); // Change animation every 4 seconds
-}
-
-// Function to set specific loading animation
-function setLoadingAnimation(animationType) {
-  if (Object.values(LOADING_ANIMATIONS).includes(animationType)) {
-    currentLoadingType = animationType;
-  }
-}
+// Removed animation cycling functions since we're using only one consistent animation
 
 function startProgressTracking() {
   currentStep = 0;
@@ -3016,6 +2970,9 @@ async function handleFormSubmit(event) {
     setBusy(false);
     updateGenerateButtonState(); // re-enable based on current inputs
     inFlightController = null;
+
+    // Ensure button is completely reset
+    generateButton.classList.remove("button-success", "button-error");
   }
 }
 

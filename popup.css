@@ -1239,8 +1239,9 @@ body {
   box-shadow: 0 4px 14px rgba(206, 0, 3, 0.1);
   position: relative;
   flex-shrink: 0;
-  min-width: 140px;
+  min-width: 180px;
   width: auto;
+  padding: var(--space-4) var(--space-8);
 }
 
 .generate-btn::after {
