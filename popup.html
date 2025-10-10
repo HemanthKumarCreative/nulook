@@ -360,10 +360,38 @@
           <div class="generate-controls">
             <!-- Generate Button -->
             <button type="submit" id="generate-btn" class="generate-btn">
+              <!-- Loading Steps Indicator -->
+              <div class="loading-steps">
+                <div class="loading-step" data-step="1"></div>
+                <div class="loading-step" data-step="2"></div>
+                <div class="loading-step" data-step="3"></div>
+                <div class="loading-step" data-step="4"></div>
+                <div class="loading-step" data-step="5"></div>
+              </div>
+
               <span class="btn-icon">⚡</span>
               <span class="btn-text">Générer</span>
+
               <div class="btn-loading hidden">
+                <!-- Modern Loading Animations -->
+                <div class="pulsing-dots">
+                  <div class="dot"></div>
+                  <div class="dot"></div>
+                  <div class="dot"></div>
+                </div>
+                <div class="wave-loading">
+                  <div class="wave-bar"></div>
+                  <div class="wave-bar"></div>
+                  <div class="wave-bar"></div>
+                  <div class="wave-bar"></div>
+                  <div class="wave-bar"></div>
+                </div>
                 <div class="loading-spinner"></div>
+              </div>
+
+              <!-- Progress Bar -->
+              <div class="progress-bar-container">
+                <div class="progress-bar" id="progress-bar"></div>
               </div>
             </button>
           </div>

@@ -418,6 +418,36 @@ async function fetchImageWithCorsHandling(url, signal) {
   );
 }
 
+// Loading animation types
+const LOADING_ANIMATIONS = {
+  PULSING_DOTS: "pulsing-dots",
+  WAVE: "wave-loading",
+  SPINNER: "loading-spinner",
+  PROGRESS: "loading-progress",
+  PULSE: "loading-pulse",
+  GLOW: "loading-glow",
+  BREATHING: "breathing-loading",
+  GRADIENT: "gradient-loading",
+  MORPHING: "morphing-button",
+};
+
+// Current loading animation type
+let currentLoadingType = LOADING_ANIMATIONS.PULSING_DOTS;
+
+// Loading messages for different stages
+const LOADING_MESSAGES = [
+  "🎯 Préparation de votre expérience d'essayage virtuel...",
+  "📥 Récupération de l'image de vêtement depuis le site web...",
+  "💫 Laissez-nous faire la magie... Cela peut prendre un moment.",
+  "🎨 Génération de votre essayage virtuel en cours...",
+  "✨ Finalisation de votre image personnalisée...",
+];
+
+let loadingMessageIndex = 0;
+let loadingMessageInterval = null;
+let currentStep = 0;
+let progressInterval = null;
+
 function setBusy(isBusy) {
   generateButton.disabled = isBusy || generateButton.disabled;
   form.classList.toggle("busy", isBusy);
@@ -428,17 +458,149 @@ function setBusy(isBusy) {
   const btnIcon = generateButton.querySelector(".btn-icon");
 
   if (isBusy) {
+    // Remove all previous loading classes
+    Object.values(LOADING_ANIMATIONS).forEach((animation) => {
+      generateButton.classList.remove(animation);
+    });
+
+    // Add current loading animation
     generateButton.classList.add("button-loading");
+    generateButton.classList.add(currentLoadingType);
+
+    // Show loading content
     btnLoading.classList.remove("hidden");
     btnLoading.classList.add("show");
+
+    // Update button content
     btnText.textContent = "Génération...";
     btnIcon.textContent = "⏱️";
+
+    // Start cycling through loading messages
+    startLoadingMessages();
+
+    // Start progress tracking
+    startProgressTracking();
+
+    // Cycle through different loading animations
+    cycleLoadingAnimations();
   } else {
+    // Remove all loading classes
     generateButton.classList.remove("button-loading");
+    Object.values(LOADING_ANIMATIONS).forEach((animation) => {
+      generateButton.classList.remove(animation);
+    });
+
+    // Hide loading content
     btnLoading.classList.add("hidden");
     btnLoading.classList.remove("show");
+
+    // Reset button content
     btnText.textContent = "Générer";
     btnIcon.textContent = "⚡";
+
+    // Stop loading messages
+    stopLoadingMessages();
+
+    // Stop progress tracking
+    stopProgressTracking();
+  }
+}
+
+function startLoadingMessages() {
+  loadingMessageIndex = 0;
+  loadingMessageInterval = setInterval(() => {
+    if (loadingMessageIndex < LOADING_MESSAGES.length) {
+      setStatus(LOADING_MESSAGES[loadingMessageIndex]);
+      loadingMessageIndex++;
+    } else {
+      // Reset to first message
+      loadingMessageIndex = 0;
+    }
+  }, 3000); // Change message every 3 seconds
+}
+
+function stopLoadingMessages() {
+  if (loadingMessageInterval) {
+    clearInterval(loadingMessageInterval);
+    loadingMessageInterval = null;
+  }
+}
+
+function cycleLoadingAnimations() {
+  const animations = [
+    LOADING_ANIMATIONS.PULSING_DOTS,
+    LOADING_ANIMATIONS.WAVE,
+    LOADING_ANIMATIONS.PROGRESS,
+    LOADING_ANIMATIONS.PULSE,
+    LOADING_ANIMATIONS.GLOW,
+    LOADING_ANIMATIONS.BREATHING,
+    LOADING_ANIMATIONS.GRADIENT,
+  ];
+
+  let animationIndex = 0;
+
+  const animationInterval = setInterval(() => {
+    // Remove current animation
+    generateButton.classList.remove(currentLoadingType);
+
+    // Move to next animation
+    animationIndex = (animationIndex + 1) % animations.length;
+    currentLoadingType = animations[animationIndex];
+
+    // Add new animation
+    generateButton.classList.add(currentLoadingType);
+
+    // Stop cycling if button is no longer busy
+    if (!generateButton.disabled) {
+      clearInterval(animationInterval);
+    }
+  }, 4000); // Change animation every 4 seconds
+}
+
+// Function to set specific loading animation
+function setLoadingAnimation(animationType) {
+  if (Object.values(LOADING_ANIMATIONS).includes(animationType)) {
+    currentLoadingType = animationType;
+  }
+}
+
+function startProgressTracking() {
+  currentStep = 0;
+  updateLoadingSteps();
+  updateProgressBar(0);
+
+  progressInterval = setInterval(() => {
+    currentStep = (currentStep + 1) % 5;
+    updateLoadingSteps();
+    updateProgressBar((currentStep + 1) * 20);
+  }, 2000); // Change step every 2 seconds
+}
+
+function stopProgressTracking() {
+  if (progressInterval) {
+    clearInterval(progressInterval);
+    progressInterval = null;
+  }
+  currentStep = 0;
+  updateLoadingSteps();
+  updateProgressBar(0);
+}
+
+function updateLoadingSteps() {
+  const steps = generateButton.querySelectorAll(".loading-step");
+  steps.forEach((step, index) => {
+    if (index <= currentStep) {
+      step.classList.add("active");
+    } else {
+      step.classList.remove("active");
+    }
+  });
+}
+
+function updateProgressBar(percentage) {
+  const progressBar = document.getElementById("progress-bar");
+  if (progressBar) {
+    progressBar.style.width = `${percentage}%`;
   }
 }
 
@@ -2737,12 +2899,15 @@ async function handleFormSubmit(event) {
   try {
     // Step 1: Fetch the selected website image with CORS handling
     setStatus("📥 Récupération de l'image de vêtement depuis le site web...");
+    updateProgressBar(20);
     const clothingBlob = await fetchImageWithCorsHandling(
       selectedClothingUrl,
       inFlightController.signal
     );
 
     // Step 2: Create FormData and append both images
+    setStatus("🎨 Préparation des images pour la génération...");
+    updateProgressBar(40);
     const formData = new FormData();
     formData.append("personImage", personImageInput.files[0]);
     // Give the blob a filename so the server's 'multer' can process it
@@ -2757,6 +2922,7 @@ async function handleFormSubmit(event) {
 
     // Step 3: Send to the backend (expects JSON response)
     setStatus("💫 Laissez-nous faire la magie... Cela peut prendre un moment.");
+    updateProgressBar(60);
 
     const apiResponse = await fetch(API_URL, {
       method: "POST",
@@ -2783,6 +2949,10 @@ async function handleFormSubmit(event) {
 
     // Check for success status
     if (data.status === "success" && data.image) {
+      // Update progress to completion
+      updateProgressBar(100);
+      setStatus("✨ Finalisation de votre image personnalisée...");
+
       // The image is already a data URL from the backend
       resultImage.src = data.image;
 
