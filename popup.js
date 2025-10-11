@@ -64,17 +64,12 @@ const signoutBtn = document.getElementById("signout-btn");
 // Authentication gate elements
 const authGate = document.getElementById("auth-gate");
 const mainContent = document.getElementById("main-content");
-const authGateSigninBtn = document.getElementById("auth-gate-signin-btn");
 
 // Backend URL (adjust if needed)
 const API_URL =
   "https://try-on-server-v1-294135365335.europe-west9.run.app/api/fashion-photo";
 
 // --- Utility ---
-
-function setStatus(msg) {
-  statusDiv.textContent = msg;
-}
 
 /**
  * Display error message with enhanced inline UI/UX
@@ -130,48 +125,37 @@ function showSuccessResult() {
 
 // --- Storage Utilities ---
 
-/**
- * Save data to Chrome storage
- * @param {string} key - Storage key
- * @param {any} data - Data to save
- * @returns {Promise<void>}
- */
+// Utility functions
+function setStatus(message) {
+  console.log("setStatus called with message:", message);
+  statusDiv.textContent = message;
+  statusDiv.style.display = message ? "block" : "none";
+  console.log(
+    "Status div updated - textContent:",
+    statusDiv.textContent,
+    "display:",
+    statusDiv.style.display
+  );
+}
+
 async function saveToStorage(key, data) {
-  try {
-    await chrome.storage.local.set({ [key]: data });
-    console.log(`Saved to storage: ${key}`);
-  } catch (error) {
-    console.error(`Failed to save to storage ${key}:`, error);
-  }
+  return new Promise((resolve) => {
+    chrome.storage.local.set({ [key]: data }, resolve);
+  });
 }
 
-/**
- * Load data from Chrome storage
- * @param {string} key - Storage key
- * @returns {Promise<any>} - Stored data or null
- */
-async function loadFromStorage(key) {
-  try {
-    const result = await chrome.storage.local.get([key]);
-    return result[key] || null;
-  } catch (error) {
-    console.error(`Failed to load from storage ${key}:`, error);
-    return null;
-  }
+async function getFromStorage(key) {
+  return new Promise((resolve) => {
+    chrome.storage.local.get([key], (result) => {
+      resolve(result[key] || null);
+    });
+  });
 }
 
-/**
- * Clear specific storage key
- * @param {string} key - Storage key to clear
- * @returns {Promise<void>}
- */
 async function clearStorageKey(key) {
-  try {
-    await chrome.storage.local.remove([key]);
-    console.log(`Cleared storage: ${key}`);
-  } catch (error) {
-    console.error(`Failed to clear storage ${key}:`, error);
-  }
+  return new Promise((resolve) => {
+    chrome.storage.local.remove([key], resolve);
+  });
 }
 
 /**
@@ -230,7 +214,7 @@ async function saveGeneratedImage(dataUrl) {
  */
 async function restoreUploadedImage() {
   try {
-    const imageData = await loadFromStorage(STORAGE_KEYS.UPLOADED_IMAGE);
+    const imageData = await getFromStorage(STORAGE_KEYS.UPLOADED_IMAGE);
     if (!imageData || !imageData.dataUrl) return false;
 
     // Set the preview image
@@ -265,7 +249,7 @@ async function restoreUploadedImage() {
  */
 async function restoreGeneratedImage() {
   try {
-    const imageData = await loadFromStorage(STORAGE_KEYS.GENERATED_IMAGE);
+    const imageData = await getFromStorage(STORAGE_KEYS.GENERATED_IMAGE);
     if (!imageData || !imageData.dataUrl) return false;
 
     // Set the result image
@@ -287,7 +271,7 @@ async function restoreGeneratedImage() {
  */
 async function restoreSelectedClothingUrl() {
   try {
-    const url = await loadFromStorage(STORAGE_KEYS.SELECTED_CLOTHING_URL);
+    const url = await getFromStorage(STORAGE_KEYS.SELECTED_CLOTHING_URL);
     if (!url) return false;
 
     selectedClothingUrl = url;
@@ -430,10 +414,27 @@ const LOADING_MESSAGES = [
   "✨ Finalisation de votre image personnalisée...",
 ];
 
+// Authentication loading messages
+const AUTH_LOADING_MESSAGES = [
+  "🔐 Vérification de vos identifiants...",
+  "🔍 Validation de votre compte...",
+  "⚡ Connexion en cours...",
+  "🎉 Finalisation de la connexion...",
+];
+
+// Session restoration loading messages
+const SESSION_LOADING_MESSAGES = [
+  "🔄 Restauration de votre session...",
+  "📱 Chargement de vos données...",
+  "✨ Préparation de l'interface...",
+];
+
 let loadingMessageIndex = 0;
 let loadingMessageInterval = null;
 let currentStep = 0;
 let progressInterval = null;
+let authLoadingInterval = null;
+let sessionLoadingInterval = null;
 
 function setBusy(isBusy) {
   generateButton.disabled = isBusy || generateButton.disabled;
@@ -558,6 +559,194 @@ function updateProgressBar(percentage) {
   }
 }
 
+/**
+ * Start authentication loading state
+ */
+function startAuthLoading() {
+  let authMessageIndex = 0;
+
+  // Show initial loading message
+  setStatus(AUTH_LOADING_MESSAGES[0]);
+
+  // Start cycling through auth loading messages
+  authLoadingInterval = setInterval(() => {
+    authMessageIndex = (authMessageIndex + 1) % AUTH_LOADING_MESSAGES.length;
+    setStatus(AUTH_LOADING_MESSAGES[authMessageIndex]);
+  }, 2000); // Change message every 2 seconds
+
+  // Add loading class to auth gate
+  const authGate = document.getElementById("auth-gate");
+  if (authGate) {
+    authGate.classList.add("loading");
+  }
+}
+
+/**
+ * Stop authentication loading state
+ */
+function stopAuthLoading() {
+  if (authLoadingInterval) {
+    clearInterval(authLoadingInterval);
+    authLoadingInterval = null;
+  }
+
+  // Remove loading class from auth gate
+  const authGate = document.getElementById("auth-gate");
+  if (authGate) {
+    authGate.classList.remove("loading");
+  }
+}
+
+/**
+ * Show initial loading state during extension startup
+ */
+function showInitialLoadingState() {
+  // Hide both auth gate and main content initially
+  const authGate = document.getElementById("auth-gate");
+  const mainContent = document.getElementById("main-content");
+
+  if (authGate) {
+    authGate.style.display = "none";
+    authGate.classList.add("hidden");
+  }
+
+  if (mainContent) {
+    mainContent.style.display = "none";
+    mainContent.classList.add("hidden");
+  }
+
+  // Show loading message
+  setStatus("🔄 Initialisation de l'extension...");
+
+  // Add loading class to body for global loading state
+  document.body.classList.add("initializing");
+}
+
+/**
+ * Hide initial loading state
+ */
+function hideInitialLoadingState() {
+  document.body.classList.remove("initializing");
+}
+
+/**
+ * Start session restoration loading state
+ */
+function startSessionLoading() {
+  let sessionMessageIndex = 0;
+
+  // Show initial loading message
+  setStatus(SESSION_LOADING_MESSAGES[0]);
+
+  // Start cycling through session loading messages
+  sessionLoadingInterval = setInterval(() => {
+    sessionMessageIndex =
+      (sessionMessageIndex + 1) % SESSION_LOADING_MESSAGES.length;
+    setStatus(SESSION_LOADING_MESSAGES[sessionMessageIndex]);
+  }, 1500); // Change message every 1.5 seconds
+
+  // Add loading class to main content
+  const mainContent = document.getElementById("main-content");
+  if (mainContent) {
+    mainContent.classList.add("loading");
+  }
+}
+
+/**
+ * Stop session restoration loading state
+ */
+function stopSessionLoading() {
+  if (sessionLoadingInterval) {
+    clearInterval(sessionLoadingInterval);
+    sessionLoadingInterval = null;
+  }
+
+  // Remove loading class from main content
+  const mainContent = document.getElementById("main-content");
+  if (mainContent) {
+    mainContent.classList.remove("loading");
+  }
+}
+
+/**
+ * Start image upload loading state
+ */
+function startImageUploadLoading() {
+  setStatus("📤 Téléchargement de votre image...");
+
+  // Add loading class to upload container
+  const uploadContainer = document.getElementById("person-upload-container");
+  if (uploadContainer) {
+    uploadContainer.classList.add("uploading");
+  }
+}
+
+/**
+ * Stop image upload loading state
+ */
+function stopImageUploadLoading() {
+  // Remove loading class from upload container
+  const uploadContainer = document.getElementById("person-upload-container");
+  if (uploadContainer) {
+    uploadContainer.classList.remove("uploading");
+  }
+}
+
+/**
+ * Handle person image selection
+ */
+async function handlePersonImageSelection() {
+  const file = personImageInput.files[0];
+  if (file) {
+    // Start upload loading
+    startImageUploadLoading();
+
+    try {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        personPreviewImage.src = e.target.result;
+        personPreviewContainer.classList.remove("hidden");
+
+        // Hide upload container
+        document
+          .getElementById("person-upload-container")
+          .classList.add("hidden");
+
+        // Save the uploaded image to storage
+        await saveUploadedImage(file);
+
+        // Stop upload loading
+        stopImageUploadLoading();
+        setStatus("✅ Image téléchargée avec succès !");
+
+        // Clear status after 2 seconds
+        setTimeout(() => {
+          if (statusDiv.textContent.includes("Image téléchargée avec succès")) {
+            setStatus("");
+          }
+        }, 2000);
+      };
+      reader.readAsDataURL(file);
+    } catch (error) {
+      stopImageUploadLoading();
+      console.error("Error handling image selection:", error);
+      setStatus("❌ Erreur lors du téléchargement de l'image.");
+    }
+  } else {
+    personPreviewContainer.classList.add("hidden");
+    personPreviewImage.src = "";
+
+    // Show upload container
+    document
+      .getElementById("person-upload-container")
+      .classList.remove("hidden");
+
+    // Clear the uploaded image from storage
+    await clearStorageKey(STORAGE_KEYS.UPLOADED_IMAGE);
+  }
+  updateGenerateButtonState();
+}
+
 function enableDownload(enable) {
   downloadButton.disabled = !enable;
   if (resultDownloadButton) {
@@ -569,199 +758,632 @@ function enableDownload(enable) {
 // --- Google Sign-In Authentication ---
 
 /**
- * Initialize Google Sign-In authentication
+ * Initialize the extension
  */
-async function initializeGoogleAuth() {
+async function initializeExtension() {
   try {
+    console.log("Initializing extension...");
+
     // Check if user is already authenticated
-    const savedUser = await loadFromStorage(STORAGE_KEYS.USER_AUTH);
-    if (savedUser && savedUser.accessToken) {
+    const storedUser = await getFromStorage(STORAGE_KEYS.USER_AUTH);
+    console.log(
+      "Stored user from storage:",
+      storedUser ? "Found" : "Not found"
+    );
+
+    if (storedUser && storedUser.accessToken) {
+      console.log("User found in storage, verifying token...");
+
+      // Start session loading
+      startSessionLoading();
+
       // Verify token is still valid
-      const isValid = await verifyGoogleToken(savedUser.accessToken);
+      const isValid = await verifyToken(storedUser.accessToken);
+
       if (isValid) {
-        currentUser = savedUser;
+        console.log("Token is valid, restoring user session");
+        currentUser = storedUser;
+
+        // Stop session loading and show success
+        stopSessionLoading();
+        hideInitialLoadingState();
+        setStatus(`👤 Connecté en tant que ${currentUser.name}`);
+
+        // Clear status after 2 seconds
+        setTimeout(() => {
+          if (statusDiv.textContent.includes("Connecté en tant que")) {
+            setStatus("");
+          }
+        }, 2000);
+
         updateUserInterface(true);
         return;
       } else {
-        // Token expired, clear saved user
+        console.log("Token expired, clearing storage");
+        // Token expired, clear storage
         await clearStorageKey(STORAGE_KEYS.USER_AUTH);
+        stopSessionLoading();
       }
     }
 
-    // Show sign-in interface
+    console.log("No valid user session found, showing auth gate");
+    // Hide initial loading and show authentication gate
+    hideInitialLoadingState();
     updateUserInterface(false);
+
+    // Event listener will be set up in DOMContentLoaded
   } catch (error) {
-    console.error("Failed to initialize Google auth:", error);
+    console.error("Failed to initialize extension:", error);
+    stopSessionLoading();
+    hideInitialLoadingState();
     updateUserInterface(false);
   }
 }
 
 /**
- * Handle Google Sign-In button click
+ * Setup authentication event listeners
  */
-async function handleGoogleSignIn() {
+function setupAuthEventListeners() {
+  // Sign in form
+  const signinSubmitBtn = document.getElementById("signin-submit-btn");
+  if (signinSubmitBtn) {
+    signinSubmitBtn.addEventListener("click", handleSignIn);
+  }
+
+  // Sign up form
+  const signupSubmitBtn = document.getElementById("signup-submit-btn");
+  if (signupSubmitBtn) {
+    signupSubmitBtn.addEventListener("click", handleSignUp);
+  }
+
+  // Form switching
+  const showSignupLink = document.getElementById("show-signup");
+  if (showSignupLink) {
+    showSignupLink.addEventListener("click", (e) => {
+      e.preventDefault();
+      showSignUpForm();
+    });
+  }
+
+  const showSigninLink = document.getElementById("show-signin");
+  if (showSigninLink) {
+    showSigninLink.addEventListener("click", (e) => {
+      e.preventDefault();
+      showSignInForm();
+    });
+  }
+
+  // Password toggle buttons
+  setupPasswordToggleListeners();
+}
+
+/**
+ * Setup password toggle event listeners
+ */
+function setupPasswordToggleListeners() {
+  const passwordToggles = document.querySelectorAll(".password-toggle");
+  console.log(
+    "Setting up password toggle listeners for",
+    passwordToggles.length,
+    "buttons"
+  );
+
+  passwordToggles.forEach((toggle, index) => {
+    // Remove any existing listeners to avoid duplicates
+    toggle.removeEventListener("click", handlePasswordToggle);
+    toggle.addEventListener("click", handlePasswordToggle);
+    console.log("Added listener to toggle button", index + 1);
+  });
+}
+
+/**
+ * Handle password toggle click
+ */
+function handlePasswordToggle(e) {
+  e.preventDefault();
+  console.log("Password toggle clicked");
+
+  const input = e.target
+    .closest(".password-field")
+    .querySelector('input[type="password"], input[type="text"]');
+  if (input) {
+    console.log("Toggling password for input:", input.id);
+    togglePasswordVisibility(input.id);
+  } else {
+    console.error("Input not found for password toggle");
+  }
+}
+
+/**
+ * Show sign up form
+ */
+function showSignUpForm() {
+  const signinFields = document.getElementById("signin-fields");
+  const signupFields = document.getElementById("signup-fields");
+  const signinBtn = document.getElementById("signin-submit-btn");
+  const signupBtn = document.getElementById("signup-submit-btn");
+  const signinSwitchText = document.getElementById("signin-switch-text");
+  const signupSwitchText = document.getElementById("signup-switch-text");
+  const showSignupLink = document.getElementById("show-signup");
+  const showSigninLink = document.getElementById("show-signin");
+
+  if (signinFields && signupFields) {
+    signinFields.classList.add("hidden");
+    signupFields.classList.remove("hidden");
+    signinBtn.classList.add("hidden");
+    signupBtn.classList.remove("hidden");
+    signinSwitchText.classList.add("hidden");
+    signupSwitchText.classList.remove("hidden");
+    showSignupLink.classList.add("hidden");
+    showSigninLink.classList.remove("hidden");
+    // Re-setup password toggle listeners for the new form
+    setTimeout(() => setupPasswordToggleListeners(), 100);
+  }
+}
+
+/**
+ * Show sign in form
+ */
+function showSignInForm() {
+  const signinFields = document.getElementById("signin-fields");
+  const signupFields = document.getElementById("signup-fields");
+  const signinBtn = document.getElementById("signin-submit-btn");
+  const signupBtn = document.getElementById("signup-submit-btn");
+  const signinSwitchText = document.getElementById("signin-switch-text");
+  const signupSwitchText = document.getElementById("signup-switch-text");
+  const showSignupLink = document.getElementById("show-signup");
+  const showSigninLink = document.getElementById("show-signin");
+
+  if (signinFields && signupFields) {
+    signupFields.classList.add("hidden");
+    signinFields.classList.remove("hidden");
+    signupBtn.classList.add("hidden");
+    signinBtn.classList.remove("hidden");
+    signupSwitchText.classList.add("hidden");
+    signinSwitchText.classList.remove("hidden");
+    showSigninLink.classList.add("hidden");
+    showSignupLink.classList.remove("hidden");
+    // Re-setup password toggle listeners for the new form
+    setTimeout(() => setupPasswordToggleListeners(), 100);
+  }
+}
+
+/**
+ * Handle sign in
+ */
+async function handleSignIn() {
   try {
-    setStatus("🔐 Connexion avec Google...");
+    const email = document.getElementById("signin-email").value.trim();
+    const password = document.getElementById("signin-password").value.trim();
 
-    // Disable sign-in button during authentication
-    authGateSigninBtn.disabled = true;
-
-    // Launch Google OAuth flow
-    console.log("Calling chrome.identity.getAuthToken...");
-    const token = await chrome.identity.getAuthToken({ interactive: true });
-
-    console.log("Received token type:", typeof token);
-    console.log("Received token value:", token);
-    console.log("Token is string:", typeof token === "string");
-    console.log("Token constructor:", token?.constructor?.name);
-    console.log("Token JSON:", JSON.stringify(token));
-
-    // Ensure we have a valid token string
-    let validToken = null;
-    if (typeof token === "string") {
-      validToken = token;
-    } else if (token && typeof token === "object") {
-      // If token is an object, try to extract the string value
-      console.log("Token is object, attempting to extract value");
-      console.log("Token object keys:", Object.keys(token));
-      console.log("Token object values:", Object.values(token));
-
-      // Try different ways to extract the token
-      if (token.token) {
-        validToken = token.token;
-      } else if (token.access_token) {
-        validToken = token.access_token;
-      } else if (token.accessToken) {
-        validToken = token.accessToken;
-      } else {
-        // Last resort: try to stringify and parse
-        try {
-          const tokenStr = JSON.stringify(token);
-          console.log("Token as JSON string:", tokenStr);
-          // If it's a simple object with one property, extract it
-          const parsed = JSON.parse(tokenStr);
-          const firstKey = Object.keys(parsed)[0];
-          validToken = parsed[firstKey];
-        } catch (e) {
-          console.error("Failed to extract token from object:", e);
-          validToken = null;
-        }
-      }
+    // Validate form
+    if (!email || !password) {
+      setStatus("❌ Veuillez remplir tous les champs.");
+      return;
     }
 
-    console.log("Valid token:", validToken);
-    console.log("Valid token type:", typeof validToken);
+    if (!isValidEmail(email)) {
+      setStatus("❌ Veuillez entrer une adresse email valide.");
+      return;
+    }
 
-    if (validToken && typeof validToken === "string" && validToken.length > 0) {
-      // Additional validation: ensure token looks like a real Google token
-      if (
-        validToken.startsWith("ya29.") ||
-        validToken.startsWith("1//") ||
-        validToken.length > 50
-      ) {
-        console.log("Token appears to be valid Google token");
-        // Get user profile information
-        const userInfo = await fetchGoogleUserInfo(validToken);
+    // Start authentication loading
+    startAuthLoading();
 
-        if (userInfo) {
-          // Save user data
-          currentUser = {
-            accessToken: validToken,
-            id: userInfo.id,
-            email: userInfo.email,
-            name: userInfo.name,
-            picture: userInfo.picture,
-            loginTime: Date.now(),
-          };
-
-          await saveToStorage(STORAGE_KEYS.USER_AUTH, currentUser);
-          updateUserInterface(true);
-
-          setStatus("✅ Connexion réussie ! Bienvenue, " + userInfo.name);
-
-          // Clear status after a few seconds
-          setTimeout(() => {
-            if (statusDiv.textContent.includes("Connexion réussie")) {
-              setStatus("");
-            }
-          }, 3000);
-        } else {
-          throw new Error("Failed to fetch user information");
-        }
-      } else {
-        console.error(
-          "Token doesn't appear to be a valid Google token:",
-          validToken
-        );
-        throw new Error("Invalid Google token format");
-      }
-    } else if (token && typeof token !== "string") {
-      throw new Error("Invalid token format received");
-    } else {
-      throw new Error("No access token received");
+    // Call the real authentication API
+    try {
+      await authenticateUser(email, password, "signin");
+      stopAuthLoading();
+    } catch (error) {
+      stopAuthLoading();
+      console.error("Sign in error:", error);
+      // Error handling is already done in authenticateUser function
     }
   } catch (error) {
-    console.error("Google Sign-In error:", error);
+    stopAuthLoading();
+    console.error("Sign in error:", error);
     setStatus("❌ Échec de la connexion. Veuillez réessayer.");
+  }
+}
 
-    // Re-enable sign-in button on error
-    authGateSigninBtn.disabled = false;
+/**
+ * Handle sign up
+ */
+async function handleSignUp() {
+  try {
+    const name = document.getElementById("signup-name").value.trim();
+    const email = document.getElementById("signup-email").value.trim();
+    const password = document.getElementById("signup-password").value.trim();
+    const confirmPassword = document
+      .getElementById("signup-confirm-password")
+      .value.trim();
 
-    // Clear status after a few seconds
+    // Validate form
+    if (!name || !email || !password || !confirmPassword) {
+      setStatus("❌ Veuillez remplir tous les champs.");
+      return;
+    }
+
+    if (!isValidEmail(email)) {
+      setStatus("❌ Veuillez entrer une adresse email valide.");
+      return;
+    }
+
+    if (password.length < 6) {
+      setStatus("❌ Le mot de passe doit contenir au moins 6 caractères.");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setStatus("❌ Les mots de passe ne correspondent pas.");
+      return;
+    }
+
+    // Start authentication loading
+    startAuthLoading();
+
+    // Call the real authentication API
+    try {
+      await authenticateUser(email, password, "signup", name);
+      stopAuthLoading();
+    } catch (error) {
+      stopAuthLoading();
+      console.error("Sign up error:", error);
+      // Error handling is already done in authenticateUser function
+    }
+  } catch (error) {
+    stopAuthLoading();
+    console.error("Sign up error:", error);
+    setStatus("❌ Échec de la création du compte. Veuillez réessayer.");
+  }
+}
+
+/**
+ * Validate email format
+ */
+function isValidEmail(email) {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+}
+
+/**
+ * Authenticate user with real backend API
+ */
+async function authenticateUser(email, password, type, name = null) {
+  try {
+    const API_BASE_URL =
+      "https://try-on-server-v1-294135365335.europe-west9.run.app";
+    const endpoint =
+      type === "signup" ? "/api/auth/register" : "/api/auth/login";
+    const requestBody =
+      type === "signup" ? { name, email, password } : { email, password };
+
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(requestBody),
+    });
+
+    const data = await response.json();
+
+    // Check if response is ok (status 200-299) but API returned success: false
+    if (!response.ok) {
+      // Handle HTTP error status codes
+      let statusErrorMessage = "❌ ";
+
+      switch (response.status) {
+        case 400:
+          statusErrorMessage += "Données invalides. Vérifiez vos informations.";
+          break;
+        case 401:
+          statusErrorMessage += "Email ou mot de passe incorrect.";
+          break;
+        case 403:
+          statusErrorMessage += "Accès refusé. Compte non autorisé.";
+          break;
+        case 404:
+          statusErrorMessage +=
+            "Service non trouvé. Vérifiez la configuration.";
+          break;
+        case 409:
+          statusErrorMessage += "Ce compte existe déjà.";
+          break;
+        case 422:
+          statusErrorMessage += "Données de validation incorrectes.";
+          break;
+        case 429:
+          statusErrorMessage += "Trop de tentatives. Veuillez patienter.";
+          break;
+        case 500:
+          statusErrorMessage += "Erreur serveur. Veuillez réessayer plus tard.";
+          break;
+        case 503:
+          statusErrorMessage += "Service temporairement indisponible.";
+          break;
+        default:
+          statusErrorMessage += `Erreur serveur (${response.status}). Veuillez réessayer.`;
+      }
+
+      setStatus(statusErrorMessage);
+
+      // Clear error message after 6 seconds
+      setTimeout(() => {
+        if (statusDiv.textContent.includes("❌")) {
+          setStatus("");
+        }
+      }, 6000);
+
+      return;
+    }
+
+    if (data.success) {
+      // Store user data and token
+      currentUser = data.data.user;
+      currentUser.accessToken = data.data.token;
+      currentUser.loginTime = Date.now();
+
+      // Save to storage
+      await saveToStorage(STORAGE_KEYS.USER_AUTH, currentUser);
+
+      // Sync user session for fullscreen mode
+      await syncUserSession();
+
+      // Show success message with user name first
+      const message =
+        type === "signup"
+          ? `✅ Compte créé avec succès ! Bienvenue, ${currentUser.name}`
+          : `✅ Connexion réussie ! Bienvenue, ${currentUser.name}`;
+
+      setStatus(message);
+
+      // Update UI after showing success message
+      updateUserInterface(true);
+
+      // Clear form fields
+      clearAuthForms();
+
+      // Clear status after 4 seconds
+      setTimeout(() => {
+        if (
+          statusDiv.textContent.includes("réussi") ||
+          statusDiv.textContent.includes("créé")
+        ) {
+          setStatus("");
+        }
+      }, 4000);
+    } else {
+      // Handle API error response with detailed error messages
+      console.log("API returned success: false, data:", data);
+
+      let errorMessage = "❌ ";
+
+      // Check for different error formats from API
+      if (data.message) {
+        errorMessage += data.message;
+        console.log("Using data.message:", data.message);
+      } else if (data.error) {
+        errorMessage += data.error;
+        console.log("Using data.error:", data.error);
+      } else if (data.errors) {
+        // Handle validation errors object
+        const errorKeys = Object.keys(data.errors);
+        if (errorKeys.length > 0) {
+          const firstError = data.errors[errorKeys[0]];
+          if (Array.isArray(firstError)) {
+            errorMessage += firstError[0]; // Get first error message from array
+          } else {
+            errorMessage += firstError;
+          }
+        } else {
+          errorMessage += "Une erreur s'est produite";
+        }
+      } else if (data.error_message) {
+        // Handle nested error_message structure
+        if (typeof data.error_message === "string") {
+          errorMessage += data.error_message;
+        } else if (data.error_message.message) {
+          errorMessage += data.error_message.message;
+        } else {
+          errorMessage += "Une erreur s'est produite";
+        }
+      } else {
+        errorMessage += "Une erreur s'est produite";
+      }
+
+      console.log("Final error message:", errorMessage);
+      setStatus(errorMessage);
+      console.log(
+        "Status set, current statusDiv content:",
+        statusDiv.textContent
+      );
+      console.log("Status div display style:", statusDiv.style.display);
+      console.log(
+        "Status div visibility:",
+        window.getComputedStyle(statusDiv).visibility
+      );
+      console.log(
+        "Auth gate display:",
+        document.getElementById("auth-gate")?.style.display
+      );
+      console.log(
+        "Main content display:",
+        document.getElementById("main-content")?.style.display
+      );
+
+      // Clear error message after 6 seconds
+      setTimeout(() => {
+        if (statusDiv.textContent.includes("❌")) {
+          setStatus("");
+        }
+      }, 6000);
+    }
+  } catch (error) {
+    console.error("Authentication error:", error);
+
+    // Handle different types of errors
+    let errorMessage = "❌ ";
+
+    if (error.name === "TypeError" && error.message.includes("fetch")) {
+      // Network error
+      errorMessage +=
+        "Erreur de connexion au serveur. Vérifiez votre connexion internet.";
+    } else if (error.name === "SyntaxError") {
+      // JSON parsing error
+      errorMessage += "Erreur de communication avec le serveur.";
+    } else if (error.message) {
+      // Other errors with messages
+      errorMessage += error.message;
+    } else {
+      // Generic error
+      errorMessage += "Erreur de connexion. Veuillez réessayer.";
+    }
+
+    setStatus(errorMessage);
+
+    // Clear error message after 6 seconds
     setTimeout(() => {
-      if (statusDiv.textContent.includes("Échec de la connexion")) {
+      if (statusDiv.textContent.includes("❌")) {
         setStatus("");
       }
-    }, 3000);
+    }, 6000);
   }
 }
 
 /**
- * Handle Google Sign-Out
+ * Clear authentication form fields
  */
-async function handleGoogleSignOut() {
+function clearAuthForms() {
+  // Clear signin form
+  const signinEmail = document.getElementById("signin-email");
+  const signinPassword = document.getElementById("signin-password");
+  if (signinEmail) signinEmail.value = "";
+  if (signinPassword) signinPassword.value = "";
+
+  // Clear signup form
+  const signupName = document.getElementById("signup-name");
+  const signupEmail = document.getElementById("signup-email");
+  const signupPassword = document.getElementById("signup-password");
+  const signupConfirmPassword = document.getElementById(
+    "signup-confirm-password"
+  );
+
+  if (signupName) signupName.value = "";
+  if (signupEmail) signupEmail.value = "";
+  if (signupPassword) signupPassword.value = "";
+  if (signupConfirmPassword) signupConfirmPassword.value = "";
+}
+
+/**
+ * Toggle password visibility
+ */
+function togglePasswordVisibility(inputId) {
+  const input = document.getElementById(inputId);
+  if (!input) {
+    console.error("Input element not found:", inputId);
+    return;
+  }
+
+  const toggleButton = input.parentElement.querySelector(".password-toggle");
+  if (!toggleButton) {
+    console.error("Toggle button not found for input:", inputId);
+    return;
+  }
+
+  const eyeIcon = toggleButton.querySelector(".eye-icon");
+  if (!eyeIcon) {
+    console.error("Eye icon not found for input:", inputId);
+    return;
+  }
+
+  if (input.type === "password") {
+    input.type = "text";
+    // Change to eye-off icon
+    eyeIcon.innerHTML = `
+      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    `;
+    toggleButton.setAttribute("aria-label", "Hide password");
+  } else {
+    input.type = "password";
+    // Change back to eye icon
+    eyeIcon.innerHTML = `
+      <path d="M1 12S5 4 12 4s11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    `;
+    toggleButton.setAttribute("aria-label", "Show password");
+  }
+}
+
+/**
+ * Verify token using backend API
+ */
+async function verifyToken(token) {
+  try {
+    if (!token || typeof token !== "string") {
+      console.error("Invalid access token for verification");
+      return false;
+    }
+
+    const API_BASE_URL =
+      "https://try-on-server-v1-294135365335.europe-west9.run.app";
+    const response = await fetch(`${API_BASE_URL}/api/auth/validate`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      // Update user data with latest info from server
+      if (data.data.user) {
+        currentUser = data.data.user;
+        currentUser.accessToken = data.data.token;
+        await saveToStorage(STORAGE_KEYS.USER_AUTH, currentUser);
+        console.log("User session restored and saved to storage");
+      }
+      return true;
+    } else {
+      console.log("Token validation failed:", data.message);
+      return false;
+    }
+  } catch (error) {
+    console.error("Token verification error:", error);
+    return false;
+  }
+}
+
+/**
+ * Handle sign out with backend API
+ */
+async function handleSignOut() {
   try {
     setStatus("👋 Déconnexion en cours...");
 
-    // Re-enable sign-in button immediately
-    authGateSigninBtn.disabled = false;
-
+    // Call logout API if user is authenticated
     if (currentUser && currentUser.accessToken) {
-      // Revoke the access token with Google
       try {
-        const revokeResponse = await fetch(
-          `https://oauth2.googleapis.com/revoke?token=${encodeURIComponent(
-            currentUser.accessToken
-          )}`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/x-www-form-urlencoded",
-            },
-          }
-        );
-
-        if (revokeResponse.ok) {
-          console.log("Token successfully revoked with Google");
-        } else {
-          console.warn(
-            "Failed to revoke token with Google, but continuing with logout"
-          );
-        }
-      } catch (revokeError) {
-        console.warn("Error revoking token with Google:", revokeError);
-        // Continue with logout even if revocation fails
-      }
-
-      // Remove cached token from Chrome
-      try {
-        await chrome.identity.removeCachedAuthToken({
-          token: currentUser.accessToken,
+        const API_BASE_URL =
+          "https://try-on-server-v1-294135365335.europe-west9.run.app";
+        const response = await fetch(`${API_BASE_URL}/api/auth/logout`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${currentUser.accessToken}`,
+            "Content-Type": "application/json",
+          },
         });
-        console.log("Token removed from Chrome cache");
-      } catch (cacheError) {
-        console.warn("Error removing token from Chrome cache:", cacheError);
-        // Continue with logout even if cache removal fails
+
+        const data = await response.json();
+        if (!data.success) {
+          console.log("Logout API error:", data.message);
+        }
+      } catch (error) {
+        console.log("Could not call logout API:", error);
+        // Continue with local logout even if API call fails
       }
     }
 
@@ -772,125 +1394,42 @@ async function handleGoogleSignOut() {
     // Update UI
     updateUserInterface(false);
 
-    // Reset all button states
-    resetButtonStates();
-
     setStatus("👋 Déconnexion réussie !");
 
-    // Clear status after a few seconds
+    // Clear status after 2 seconds
     setTimeout(() => {
       if (statusDiv.textContent.includes("Déconnexion réussie")) {
         setStatus("");
       }
     }, 2000);
   } catch (error) {
-    console.error("Google Sign-Out error:", error);
+    console.error("Sign-out error:", error);
     setStatus("❌ Erreur lors de la déconnexion.");
   }
 }
 
 /**
- * Fetch user information from Google API
+ * Generate initials from a full name
+ * @param {string} name - Full name to generate initials from
+ * @returns {string} - Initials (e.g., "John Doe" -> "JD")
  */
-async function fetchGoogleUserInfo(accessToken) {
-  try {
-    console.log("fetchGoogleUserInfo - Access token type:", typeof accessToken);
-    console.log("fetchGoogleUserInfo - Access token value:", accessToken);
-    console.log(
-      "fetchGoogleUserInfo - Access token length:",
-      accessToken?.length
-    );
+function generateInitials(name) {
+  if (!name || typeof name !== "string") {
+    return "U"; // Default to 'U' for User
+  }
 
-    // Ensure we have a valid token string
-    if (!accessToken || typeof accessToken !== "string") {
-      console.error(
-        "Invalid access token provided to fetchGoogleUserInfo:",
-        accessToken
-      );
-      throw new Error("Invalid access token provided");
-    }
-
-    // Additional check to ensure it's not [object Object]
-    if (
-      accessToken === "[object Object]" ||
-      accessToken.includes("object Object")
-    ) {
-      console.error("Token is [object Object], cannot proceed");
-      throw new Error("Token is not a valid string");
-    }
-
-    // First, try to get token info to validate the token
-    const apiUrl = `https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=${encodeURIComponent(
-      accessToken
-    )}`;
-    console.log("Making API call to:", apiUrl);
-    console.log("Encoded token:", encodeURIComponent(accessToken));
-
-    const tokenResponse = await fetch(apiUrl);
-
-    console.log("Token info response status:", tokenResponse.status);
-
-    if (!tokenResponse.ok) {
-      const errorText = await tokenResponse.text();
-      console.error("Token validation error:", errorText);
-      throw new Error(
-        `Token validation failed: ${tokenResponse.status} - ${errorText}`
-      );
-    }
-
-    const tokenInfo = await tokenResponse.json();
-    console.log("Token info received:", tokenInfo);
-
-    // Create user info from token info (more reliable for Chrome extensions)
-    console.log("Creating user info from token");
-
-    // Generate a more user-friendly name from email
-    const emailPrefix = tokenInfo.email.split("@")[0];
-    const displayName = emailPrefix
-      .replace(/[._]/g, " ")
-      .replace(/\b\w/g, (l) => l.toUpperCase());
-
-    const userInfo = {
-      id: tokenInfo.user_id,
-      email: tokenInfo.email,
-      name: displayName,
-      picture: `https://ui-avatars.com/api/?name=${encodeURIComponent(
-        displayName
-      )}&background=random&color=fff&size=200`,
-    };
-    console.log("User info created:", userInfo);
-    return userInfo;
-  } catch (error) {
-    console.error("Failed to fetch user info:", error);
-    return null;
+  const words = name.trim().split(/\s+/);
+  if (words.length === 1) {
+    // Single name - take first two characters
+    return words[0].substring(0, 2).toUpperCase();
+  } else {
+    // Multiple words - take first character of first two words
+    return (words[0].charAt(0) + words[1].charAt(0)).toUpperCase();
   }
 }
 
 /**
- * Verify if Google token is still valid
- */
-async function verifyGoogleToken(accessToken) {
-  try {
-    // Ensure we have a valid token string
-    if (!accessToken || typeof accessToken !== "string") {
-      console.error("Invalid access token for verification");
-      return false;
-    }
-
-    const response = await fetch(
-      `https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=${encodeURIComponent(
-        accessToken
-      )}`
-    );
-    return response.ok;
-  } catch (error) {
-    console.error("Token verification failed:", error);
-    return false;
-  }
-}
-
-/**
- * Update user avatar with fallback
+ * Update user avatar with fallback to initials
  */
 function updateUserAvatar(avatarUrl, userName) {
   if (avatarUrl && avatarUrl.trim() !== "") {
@@ -899,39 +1438,100 @@ function updateUserAvatar(avatarUrl, userName) {
     userAvatar.alt = userName || "Avatar utilisateur";
     userAvatar.classList.remove("hidden");
     userAvatarFallback.classList.add("hidden");
+
+    // Add error handler for broken images
+    userAvatar.onerror = () => {
+      console.log("Avatar image failed to load, showing initials");
+      showInitialsFallback(userName);
+    };
   } else {
-    // Show fallback icon
-    userAvatar.classList.add("hidden");
-    userAvatarFallback.classList.remove("hidden");
+    // Show initials fallback
+    showInitialsFallback(userName);
   }
+}
+
+/**
+ * Show initials fallback when avatar image is not available or broken
+ * @param {string} userName - User's name to generate initials from
+ */
+function showInitialsFallback(userName) {
+  const initials = generateInitials(userName);
+
+  // Hide avatar image
+  userAvatar.classList.add("hidden");
+
+  // Show fallback with initials
+  userAvatarFallback.classList.remove("hidden");
+  userAvatarFallback.innerHTML = `<span class="avatar-initials">${initials}</span>`;
+
+  console.log(`Showing initials fallback: ${initials} for user: ${userName}`);
 }
 
 /**
  * Update user interface based on authentication state
  */
 function updateUserInterface(isAuthenticated) {
+  console.log(
+    "updateUserInterface called with:",
+    isAuthenticated,
+    "currentUser:",
+    currentUser ? currentUser.name : "null"
+  );
+
   if (isAuthenticated && currentUser) {
-    // Show main content and hide auth gate
+    console.log("Showing main UI for user:", currentUser.name);
+
+    // Hide authentication gate with smooth transition
+    authGate.style.display = "none";
     authGate.classList.add("hidden");
+
+    // Show main content with smooth transition
+    mainContent.style.display = "block";
     mainContent.classList.remove("hidden");
 
-    // Show user profile in header
+    // Add a small delay to ensure smooth transition
+    setTimeout(() => {
+      mainContent.style.opacity = "1";
+      mainContent.style.transform = "translateY(0)";
+    }, 50);
+
+    // Update user info
+    userName.textContent = currentUser.name;
+    userEmail.textContent = currentUser.email;
+
+    // Update avatar with fallback to initials
+    updateUserAvatar(currentUser.picture, currentUser.name);
+
+    // Add sign-out event listener
+    signoutBtn.addEventListener("click", handleSignOut);
+
+    // Show user profile section
     userProfile.classList.remove("hidden");
 
-    // Update user information
-    updateUserAvatar(currentUser.picture, currentUser.name);
-    userName.textContent = currentUser.name || "Utilisateur";
-    userEmail.textContent = currentUser.email || "";
-  } else {
-    // Show auth gate and hide main content
-    authGate.classList.remove("hidden");
-    mainContent.classList.add("hidden");
+    // Initialize main UI components
+    initializeMainUI();
 
-    // Hide user profile
+    console.log("Main UI displayed - User authenticated:", currentUser.name);
+  } else {
+    console.log("Showing authentication gate");
+
+    // Show authentication gate with smooth transition
+    authGate.style.display = "block";
+    authGate.classList.remove("hidden");
+
+    // Hide main content with smooth transition
+    mainContent.style.opacity = "0";
+    mainContent.style.transform = "translateY(20px)";
+
+    setTimeout(() => {
+      mainContent.style.display = "none";
+      mainContent.classList.add("hidden");
+    }, 300);
+
+    // Hide user profile section
     userProfile.classList.add("hidden");
 
-    // Re-enable sign-in button when showing unauthenticated state
-    authGateSigninBtn.disabled = false;
+    console.log("Authentication gate displayed - User not authenticated");
   }
 }
 
@@ -943,19 +1543,64 @@ function getCurrentUser() {
 }
 
 /**
+ * Sync user session data to ensure consistency between popup and fullscreen modes
+ * This function is called after successful login/signup to ensure both modes have the same user data
+ */
+async function syncUserSession() {
+  try {
+    if (currentUser && currentUser.accessToken) {
+      // Save user session to storage (this will be picked up by fullscreen.js)
+      await saveToStorage(STORAGE_KEYS.USER_AUTH, currentUser);
+      console.log("User session synced to storage for fullscreen mode");
+    } else {
+      console.log("No current user to sync");
+    }
+  } catch (error) {
+    console.error("Failed to sync user session:", error);
+  }
+}
+
+/**
+ * Initialize main UI components after successful authentication
+ * This ensures all UI elements are properly set up and ready for use
+ */
+function initializeMainUI() {
+  try {
+    // Reset any previous states
+    resetButtonStates();
+
+    // Initialize form state
+    updateGenerateButtonState();
+
+    // Ensure proper initial display
+    if (mainContent && !mainContent.classList.contains("hidden")) {
+      // Force a reflow to ensure smooth transition
+      mainContent.offsetHeight;
+
+      // Set final state for smooth transition
+      setTimeout(() => {
+        mainContent.style.opacity = "1";
+        mainContent.style.transform = "translateY(0)";
+      }, 100);
+    }
+
+    console.log("Main UI initialized successfully");
+  } catch (error) {
+    console.error("Failed to initialize main UI:", error);
+  }
+}
+
+/**
  * Check if user is authenticated
  */
 function isUserAuthenticated() {
-  return currentUser !== null && currentUser.accessToken !== null;
+  return currentUser && currentUser.accessToken;
 }
 
 /**
  * Reset all button states to enabled
  */
 function resetButtonStates() {
-  // Re-enable sign-in button
-  authGateSigninBtn.disabled = false;
-
   // Re-enable other buttons that might be disabled
   generateButton.disabled = false;
   addToCartButton.disabled = false;
@@ -2566,7 +3211,7 @@ function renderCartItems() {
  */
 async function loadCartItems() {
   try {
-    const storedItems = await loadFromStorage(STORAGE_KEYS.CART_ITEMS);
+    const storedItems = await getFromStorage(STORAGE_KEYS.CART_ITEMS);
 
     // Validate stored items structure
     if (storedItems && Array.isArray(storedItems)) {
@@ -3028,20 +3673,13 @@ buyNowButton.addEventListener("click", handleBuyNow);
 addToCartButton.addEventListener("click", handleAddToCart);
 tryInStoreButton?.addEventListener("click", handleTryInStore);
 
-// Authentication gate sign-in button
-authGateSigninBtn.addEventListener("click", handleGoogleSignIn);
-authGateSigninBtn.addEventListener("keydown", (e) => {
-  if (e.key === "Enter" || e.key === " ") {
-    e.preventDefault();
-    handleGoogleSignIn();
-  }
-});
+// Google Sign-In is handled by the JavaScript Library automatically
 
-signoutBtn.addEventListener("click", handleGoogleSignOut);
+signoutBtn.addEventListener("click", handleSignOut);
 signoutBtn.addEventListener("keydown", (e) => {
   if (e.key === "Enter" || e.key === " ") {
     e.preventDefault();
-    handleGoogleSignOut();
+    handleSignOut();
   }
 });
 
@@ -3111,6 +3749,15 @@ document.addEventListener("keydown", (e) => {
 // --- Initialization ---
 // When the popup loads, ask the content script for images
 document.addEventListener("DOMContentLoaded", async () => {
+  // Show initial loading state immediately to prevent auth gate flash
+  showInitialLoadingState();
+
+  // Make togglePasswordVisibility globally available
+  window.togglePasswordVisibility = togglePasswordVisibility;
+
+  // Set up authentication event listeners
+  setupAuthEventListeners();
+
   // Set current year dynamically
   const currentYearElement = document.getElementById("current-year");
   if (currentYearElement) {
@@ -3160,16 +3807,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     personPreviewContainer.classList.add("hidden");
   }
 
-  // Restore saved data from previous session
+  // Initialize the extension first (this handles user session restoration)
+  await initializeExtension();
+
+  // Restore saved data from previous session (images, etc.)
   await restorePreviousSession();
-
-  // Initialize Google authentication
-  await initializeGoogleAuth();
-
-  // Ensure proper initial state - show auth gate by default
-  if (!isUserAuthenticated()) {
-    updateUserInterface(false);
-  }
 
   // Find the current active tab
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {

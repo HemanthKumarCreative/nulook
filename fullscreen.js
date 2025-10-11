@@ -6,6 +6,7 @@
 // --- Global State ---
 let selectedClothingUrl = null;
 let inFlightController = null;
+let currentUser = null;
 
 // --- Storage Keys ---
 const STORAGE_KEYS = {
@@ -13,6 +14,7 @@ const STORAGE_KEYS = {
   GENERATED_IMAGE: "nusense_tryon_generated_image",
   SELECTED_CLOTHING_URL: "nusense_tryon_selected_clothing_url",
   LAST_SESSION_DATA: "nusense_tryon_last_session",
+  USER_AUTH: "nusense_tryon_user_auth",
 };
 
 // --- DOM Elements ---
@@ -238,6 +240,222 @@ async function saveSessionData() {
   } catch (error) {
     console.error("Failed to save session data:", error);
   }
+}
+
+/**
+ * Save user authentication data to storage
+ * @param {Object} userData - User data to save
+ * @returns {Promise<void>}
+ */
+async function saveUserSession(userData) {
+  try {
+    if (!userData) return;
+
+    const userSessionData = {
+      ...userData,
+      lastUpdated: Date.now(),
+    };
+
+    await saveToStorage(STORAGE_KEYS.USER_AUTH, userSessionData);
+    console.log("User session saved to storage");
+  } catch (error) {
+    console.error("Failed to save user session:", error);
+  }
+}
+
+/**
+ * Load user authentication data from storage
+ * @returns {Promise<Object|null>} - User data or null
+ */
+async function loadUserSession() {
+  try {
+    const userData = await loadFromStorage(STORAGE_KEYS.USER_AUTH);
+    if (!userData || !userData.accessToken) return null;
+
+    // Verify token is still valid
+    const isValid = await verifyUserToken(userData.accessToken);
+
+    if (isValid) {
+      return userData;
+    } else {
+      // Token expired, clear storage
+      await clearStorageKey(STORAGE_KEYS.USER_AUTH);
+      return null;
+    }
+  } catch (error) {
+    console.error("Failed to load user session:", error);
+    return null;
+  }
+}
+
+/**
+ * Verify user token using backend API
+ * @param {string} token - Access token to verify
+ * @returns {Promise<boolean>} - True if token is valid
+ */
+async function verifyUserToken(token) {
+  try {
+    if (!token || typeof token !== "string") {
+      console.error("Invalid access token for verification");
+      return false;
+    }
+
+    const API_BASE_URL =
+      "https://try-on-server-v1-294135365335.europe-west9.run.app";
+    const response = await fetch(`${API_BASE_URL}/api/auth/validate`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    });
+
+    // Check if response is ok (status 200-299)
+    if (!response.ok) {
+      console.log(`Token validation failed with status: ${response.status}`);
+      return false;
+    }
+
+    const data = await response.json();
+
+    if (data.success) {
+      // Update user data with latest info from server
+      if (data.data.user) {
+        currentUser = data.data.user;
+        currentUser.accessToken = data.data.token;
+        await saveUserSession(currentUser);
+      }
+      return true;
+    } else {
+      // Log detailed error information from API
+      let errorMessage =
+        data.message || data.error || "Token validation failed";
+      if (data.errors) {
+        const errorKeys = Object.keys(data.errors);
+        if (errorKeys.length > 0) {
+          const firstError = data.errors[errorKeys[0]];
+          if (Array.isArray(firstError)) {
+            errorMessage = firstError[0];
+          } else {
+            errorMessage = firstError;
+          }
+        }
+      }
+      console.log("Token validation failed:", errorMessage);
+      return false;
+    }
+  } catch (error) {
+    console.error("Token verification error:", error);
+
+    // Log specific error types
+    if (error.name === "TypeError" && error.message.includes("fetch")) {
+      console.error("Network error during token verification");
+    } else if (error.name === "SyntaxError") {
+      console.error("JSON parsing error during token verification");
+    }
+
+    return false;
+  }
+}
+
+/**
+ * Clear user session data
+ * @returns {Promise<void>}
+ */
+async function clearUserSession() {
+  try {
+    currentUser = null;
+    await clearStorageKey(STORAGE_KEYS.USER_AUTH);
+    console.log("User session cleared");
+  } catch (error) {
+    console.error("Failed to clear user session:", error);
+  }
+}
+
+/**
+ * Check if user is authenticated
+ * @returns {boolean} - True if user is authenticated
+ */
+function isUserAuthenticated() {
+  return currentUser && currentUser.accessToken;
+}
+
+/**
+ * Get current user information
+ * @returns {Object|null} - Current user data or null
+ */
+function getCurrentUser() {
+  return currentUser;
+}
+
+/**
+ * Initialize main UI components after successful authentication
+ * This ensures all UI elements are properly set up and ready for use
+ */
+function initializeMainUI() {
+  try {
+    // Initialize form state
+    updateGenerateButtonState();
+
+    // Ensure proper initial display
+    if (form && !form.classList.contains("hidden")) {
+      // Force a reflow to ensure smooth transition
+      form.offsetHeight;
+
+      // Set final state for smooth transition
+      setTimeout(() => {
+        form.style.opacity = "1";
+        form.style.transform = "translateY(0)";
+      }, 100);
+    }
+
+    console.log("Fullscreen main UI initialized successfully");
+  } catch (error) {
+    console.error("Failed to initialize fullscreen main UI:", error);
+  }
+}
+
+/**
+ * Listen for storage changes to sync user session from popup mode
+ */
+function setupUserSessionSync() {
+  // Listen for storage changes
+  chrome.storage.onChanged.addListener((changes, namespace) => {
+    if (namespace === "local" && changes[STORAGE_KEYS.USER_AUTH]) {
+      const newUserData = changes[STORAGE_KEYS.USER_AUTH].newValue;
+      const oldUserData = changes[STORAGE_KEYS.USER_AUTH].oldValue;
+
+      // If user data was cleared (logout from popup)
+      if (!newUserData && oldUserData) {
+        currentUser = null;
+        console.log("User session cleared from popup logout");
+        setStatus("👋 Session fermée - Veuillez vous reconnecter.");
+
+        // Clear status after 3 seconds
+        setTimeout(() => {
+          if (statusDiv.textContent.includes("Session fermée")) {
+            setStatus("");
+          }
+        }, 3000);
+      }
+      // If user data was updated (login from popup)
+      else if (newUserData && newUserData.accessToken) {
+        currentUser = newUserData;
+        console.log("User session updated from popup:", currentUser.name);
+        setStatus(`👤 Connecté en tant que ${currentUser.name}`);
+
+        // Initialize main UI after authentication
+        initializeMainUI();
+
+        // Clear status after 3 seconds
+        setTimeout(() => {
+          if (statusDiv.textContent.includes("Connecté en tant que")) {
+            setStatus("");
+          }
+        }, 3000);
+      }
+    }
+  });
 }
 
 /**
@@ -588,6 +806,12 @@ function handleMinimize() {
 async function handleFormSubmit(event) {
   event.preventDefault();
 
+  // Check if user is authenticated
+  if (!isUserAuthenticated()) {
+    setStatus("🔐 Veuillez vous connecter pour utiliser l'essayage virtuel.");
+    return;
+  }
+
   if (!personImageInput.files[0] || !selectedClothingUrl) {
     setStatus(
       "📸 Veuillez télécharger votre photo et sélectionner un article de vêtement pour continuer."
@@ -729,6 +953,16 @@ async function restorePreviousSession() {
   try {
     console.log("Restoring previous session...");
 
+    // Restore user session first
+    const userSession = await loadUserSession();
+    if (userSession) {
+      currentUser = userSession;
+      console.log("User session restored:", currentUser.name);
+
+      // Initialize main UI after user session restoration
+      initializeMainUI();
+    }
+
     // Restore uploaded image
     const uploadedRestored = await restoreUploadedImage();
 
@@ -738,15 +972,27 @@ async function restorePreviousSession() {
     // Restore generated image
     const generatedRestored = await restoreGeneratedImage();
 
-    if (uploadedRestored || clothingRestored || generatedRestored) {
-      setStatus("📱 Session précédente restaurée avec succès !");
+    if (
+      userSession ||
+      uploadedRestored ||
+      clothingRestored ||
+      generatedRestored
+    ) {
+      const message = userSession
+        ? `👤 Connecté en tant que ${currentUser.name} - Session précédente restaurée !`
+        : "📱 Session précédente restaurée avec succès !";
+
+      setStatus(message);
 
       // Update button states after restoration
       updateGenerateButtonState();
 
       // Clear status message after a few seconds
       setTimeout(() => {
-        if (statusDiv.textContent.includes("Session précédente restaurée")) {
+        if (
+          statusDiv.textContent.includes("Session précédente restaurée") ||
+          statusDiv.textContent.includes("Connecté en tant que")
+        ) {
           setStatus("");
         }
       }, 3000);
@@ -774,6 +1020,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (currentYearElement) {
     currentYearElement.textContent = new Date().getFullYear();
   }
+
+  // Set up user session synchronization
+  setupUserSessionSync();
 
   updateGenerateButtonState(); // Initial state
   enableDownload(false);

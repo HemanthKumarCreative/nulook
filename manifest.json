@@ -3,15 +3,13 @@
   "name": "NUSENSE TryON",
   "version": "2.0",
   "description": "Transformez votre style avec l'essayage virtuel alimenté par IA. Sélectionnez des vêtements de n'importe quel site web et voyez comment ils vous vont instantanément.",
-  "icons": {
-    "16": "icons/16.png",
-    "20": "icons/20.png",
-    "29": "icons/29.png",
-    "32": "icons/32.png",
-    "40": "icons/40.png",
-    "48": "icons/48.png",
-    "50": "icons/50.png"
-  },
+  "permissions": ["activeTab", "scripting", "storage"],
+  "host_permissions": [
+    "https://try-on-server-v1-294135365335.europe-west9.run.app/*",
+    "https://accounts.google.com/*",
+    "https://www.googleapis.com/*",
+    "https://*/*"
+  ],
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
@@ -24,16 +22,19 @@
       "50": "icons/50.png"
     }
   },
-  "permissions": ["activeTab", "scripting", "storage", "identity"],
-  "host_permissions": [
-    "https://try-on-server-v1-294135365335.europe-west9.run.app/*",
-    "https://accounts.google.com/*",
-    "https://www.googleapis.com/*",
-    "https://oauth2.googleapis.com/*",
-    "https://*/*"
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"]
+    }
   ],
-  "oauth2": {
-    "client_id": "294135365335-5armli6j0qscqijf3rtjcn0ekmalgmm3.apps.googleusercontent.com",
-    "scopes": ["openid", "email", "profile"]
+  "icons": {
+    "16": "icons/16.png",
+    "20": "icons/20.png",
+    "29": "icons/29.png",
+    "32": "icons/32.png",
+    "40": "icons/40.png",
+    "48": "icons/48.png",
+    "50": "icons/50.png"
   }
 }
