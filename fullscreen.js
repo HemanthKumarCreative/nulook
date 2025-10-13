@@ -39,8 +39,7 @@ const tryInStoreButton = document.getElementById("try-in-store-btn");
 const minimizeButton = document.getElementById("minimize-btn");
 
 // Backend URL (adjust if needed)
-const API_URL =
-  "https://try-on-server-v1-294135365335.europe-west9.run.app/api/tryon";
+const API_URL = "https://try-on-server-v1.onrender.com/api/tryon";
 
 // --- Utility ---
 
@@ -300,8 +299,7 @@ async function verifyUserToken(token) {
       return false;
     }
 
-    const API_BASE_URL =
-      "https://try-on-server-v1-294135365335.europe-west9.run.app";
+    const API_BASE_URL = "https://try-on-server-v1.onrender.com";
     const response = await fetch(`${API_BASE_URL}/api/auth/validate`, {
       method: "GET",
       headers: {

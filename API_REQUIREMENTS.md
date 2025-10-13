@@ -5,7 +5,7 @@ This document outlines the API requirements for implementing a complete authenti
 
 ## Base URL
 ```
-https://try-on-server-v1-294135365335.europe-west9.run.app
+https://try-on-server-v1.onrender.com
 ```
 
 ## Authentication
@@ -396,7 +396,7 @@ CREATE TABLE password_reset_tokens (
 
 ### Test User Registration
 ```bash
-curl -X POST https://try-on-server-v1-294135365335.europe-west9.run.app/api/auth/register \
+curl -X POST https://try-on-server-v1.onrender.com/api/auth/register \
   -H "Content-Type: application/json" \
   -d '{
     "name": "Test User",
@@ -407,7 +407,7 @@ curl -X POST https://try-on-server-v1-294135365335.europe-west9.run.app/api/auth
 
 ### Test User Login
 ```bash
-curl -X POST https://try-on-server-v1-294135365335.europe-west9.run.app/api/auth/login \
+curl -X POST https://try-on-server-v1.onrender.com/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{
     "email": "test@example.com",
@@ -417,7 +417,7 @@ curl -X POST https://try-on-server-v1-294135365335.europe-west9.run.app/api/auth
 
 ### Test Token Validation
 ```bash
-curl -X GET https://try-on-server-v1-294135365335.europe-west9.run.app/api/auth/validate \
+curl -X GET https://try-on-server-v1.onrender.com/api/auth/validate \
   -H "Authorization: Bearer YOUR_JWT_TOKEN_HERE"
 ```
 

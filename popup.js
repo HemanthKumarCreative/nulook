@@ -66,8 +66,7 @@ const authGate = document.getElementById("auth-gate");
 const mainContent = document.getElementById("main-content");
 
 // Backend URL (adjust if needed)
-const API_URL =
-  "https://try-on-server-v1-294135365335.europe-west9.run.app/api/fashion-photo";
+const API_URL = "https://try-on-server-v1.onrender.com/api/fashion-photo";
 
 // --- Utility ---
 
@@ -1051,8 +1050,7 @@ function isValidEmail(email) {
  */
 async function authenticateUser(email, password, type, name = null) {
   try {
-    const API_BASE_URL =
-      "https://try-on-server-v1-294135365335.europe-west9.run.app";
+    const API_BASE_URL = "https://try-on-server-v1.onrender.com";
     const endpoint =
       type === "signup" ? "/api/auth/register" : "/api/auth/login";
     const requestBody =
@@ -1326,8 +1324,7 @@ async function verifyToken(token) {
       return false;
     }
 
-    const API_BASE_URL =
-      "https://try-on-server-v1-294135365335.europe-west9.run.app";
+    const API_BASE_URL = "https://try-on-server-v1.onrender.com";
     const response = await fetch(`${API_BASE_URL}/api/auth/validate`, {
       method: "GET",
       headers: {
@@ -1367,8 +1364,7 @@ async function handleSignOut() {
     // Call logout API if user is authenticated
     if (currentUser && currentUser.accessToken) {
       try {
-        const API_BASE_URL =
-          "https://try-on-server-v1-294135365335.europe-west9.run.app";
+        const API_BASE_URL = "https://try-on-server-v1.onrender.com";
         const response = await fetch(`${API_BASE_URL}/api/auth/logout`, {
           method: "POST",
           headers: {

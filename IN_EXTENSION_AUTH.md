@@ -78,7 +78,7 @@ This approach keeps users within the extension UI while handling Google authenti
     "storage"
   ],
   "host_permissions": [
-    "https://try-on-server-v1-294135365335.europe-west9.run.app/*",
+    "https://try-on-server-v1.onrender.com/*",
     "https://accounts.google.com/*",
     "https://www.googleapis.com/*",
     "https://*/*"

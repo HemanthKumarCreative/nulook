@@ -5,7 +5,7 @@
   "description": "Transformez votre style avec l'essayage virtuel alimenté par IA. Sélectionnez des vêtements de n'importe quel site web et voyez comment ils vous vont instantanément.",
   "permissions": ["activeTab", "scripting", "storage"],
   "host_permissions": [
-    "https://try-on-server-v1-294135365335.europe-west9.run.app/*",
+    "https://try-on-server-v1.onrender.com/*",
     "https://accounts.google.com/*",
     "https://www.googleapis.com/*",
     "https://*/*"
