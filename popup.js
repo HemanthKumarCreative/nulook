@@ -5,7 +5,6 @@ let selectedClothingUrl = null;
 let inFlightController = null;
 let cartItems = [];
 let currentProductInfo = null;
-let currentUser = null;
 
 // --- Storage Keys ---
 const STORAGE_KEYS = {
@@ -15,7 +14,6 @@ const STORAGE_KEYS = {
   LAST_SESSION_DATA: "nusense_tryon_last_session",
   CART_ITEMS: "nusense_tryon_cart_items",
   PRODUCT_INFO: "nusense_tryon_product_info",
-  USER_AUTH: "nusense_tryon_user_auth",
 };
 
 // --- DOM Elements ---
@@ -25,11 +23,9 @@ const personPreviewContainer = document.getElementById(
   "person-preview-container"
 );
 const personPreviewImage = document.getElementById("person-preview-image");
-const personFilePickerBtn = document.getElementById("person-file-picker-btn");
 const galleryContainer = document.getElementById("website-images-container");
 const previewContainer = document.getElementById("clothing-preview-container");
 const previewImage = document.getElementById("clothing-preview-image");
-const clothingSelectionBtn = document.getElementById("clothing-selection-btn");
 const generateButton = document.getElementById("generate-btn");
 const statusDiv = document.getElementById("status");
 const resultContainer = document.getElementById("result-container");
@@ -53,16 +49,7 @@ const successResult = document.getElementById("success-result");
 const errorResult = document.getElementById("error-result");
 const errorResultMessage = document.getElementById("error-result-message");
 
-// Google Sign-In elements
-const userProfile = document.getElementById("user-profile");
-const userAvatar = document.getElementById("user-avatar");
-const userAvatarFallback = document.getElementById("user-avatar-fallback");
-const userName = document.getElementById("user-name");
-const userEmail = document.getElementById("user-email");
-const signoutBtn = document.getElementById("signout-btn");
-
-// Authentication gate elements
-const authGate = document.getElementById("auth-gate");
+// Main content element
 const mainContent = document.getElementById("main-content");
 
 // Backend URL (adjust if needed)
@@ -414,12 +401,6 @@ const LOADING_MESSAGES = [
 ];
 
 // Authentication loading messages
-const AUTH_LOADING_MESSAGES = [
-  "🔐 Vérification de vos identifiants...",
-  "🔍 Validation de votre compte...",
-  "⚡ Connexion en cours...",
-  "🎉 Finalisation de la connexion...",
-];
 
 // Session restoration loading messages
 const SESSION_LOADING_MESSAGES = [
@@ -432,7 +413,6 @@ let loadingMessageIndex = 0;
 let loadingMessageInterval = null;
 let currentStep = 0;
 let progressInterval = null;
-let authLoadingInterval = null;
 let sessionLoadingInterval = null;
 
 function setBusy(isBusy) {
@@ -559,61 +539,9 @@ function updateProgressBar(percentage) {
 }
 
 /**
- * Start authentication loading state
- */
-function startAuthLoading() {
-  let authMessageIndex = 0;
-
-  // Show initial loading message
-  setStatus(AUTH_LOADING_MESSAGES[0]);
-
-  // Start cycling through auth loading messages
-  authLoadingInterval = setInterval(() => {
-    authMessageIndex = (authMessageIndex + 1) % AUTH_LOADING_MESSAGES.length;
-    setStatus(AUTH_LOADING_MESSAGES[authMessageIndex]);
-  }, 2000); // Change message every 2 seconds
-
-  // Add loading class to auth gate
-  const authGate = document.getElementById("auth-gate");
-  if (authGate) {
-    authGate.classList.add("loading");
-  }
-}
-
-/**
- * Stop authentication loading state
- */
-function stopAuthLoading() {
-  if (authLoadingInterval) {
-    clearInterval(authLoadingInterval);
-    authLoadingInterval = null;
-  }
-
-  // Remove loading class from auth gate
-  const authGate = document.getElementById("auth-gate");
-  if (authGate) {
-    authGate.classList.remove("loading");
-  }
-}
-
-/**
  * Show initial loading state during extension startup
  */
 function showInitialLoadingState() {
-  // Hide both auth gate and main content initially
-  const authGate = document.getElementById("auth-gate");
-  const mainContent = document.getElementById("main-content");
-
-  if (authGate) {
-    authGate.style.display = "none";
-    authGate.classList.add("hidden");
-  }
-
-  if (mainContent) {
-    mainContent.style.display = "none";
-    mainContent.classList.add("hidden");
-  }
-
   // Show loading message
   setStatus("🔄 Initialisation de l'extension...");
 
@@ -717,13 +645,6 @@ async function handlePersonImageSelection() {
         // Stop upload loading
         stopImageUploadLoading();
         setStatus("✅ Image téléchargée avec succès !");
-
-        // Clear status after 2 seconds
-        setTimeout(() => {
-          if (statusDiv.textContent.includes("Image téléchargée avec succès")) {
-            setStatus("");
-          }
-        }, 2000);
       };
       reader.readAsDataURL(file);
     } catch (error) {
@@ -763,641 +684,16 @@ async function initializeExtension() {
   try {
     console.log("Initializing extension...");
 
-    // Check if user is already authenticated
-    const storedUser = await getFromStorage(STORAGE_KEYS.USER_AUTH);
-    console.log(
-      "Stored user from storage:",
-      storedUser ? "Found" : "Not found"
-    );
-
-    if (storedUser && storedUser.accessToken) {
-      console.log("User found in storage, verifying token...");
-
-      // Start session loading
-      startSessionLoading();
-
-      // Verify token is still valid
-      const isValid = await verifyToken(storedUser.accessToken);
-
-      if (isValid) {
-        console.log("Token is valid, restoring user session");
-        currentUser = storedUser;
-
-        // Stop session loading and show success
-        stopSessionLoading();
-        hideInitialLoadingState();
-        setStatus(`👤 Connecté en tant que ${currentUser.name}`);
-
-        // Clear status after 2 seconds
-        setTimeout(() => {
-          if (statusDiv.textContent.includes("Connecté en tant que")) {
-            setStatus("");
-          }
-        }, 2000);
-
-        updateUserInterface(true);
-        return;
-      } else {
-        console.log("Token expired, clearing storage");
-        // Token expired, clear storage
-        await clearStorageKey(STORAGE_KEYS.USER_AUTH);
-        stopSessionLoading();
-      }
-    }
-
-    console.log("No valid user session found, showing auth gate");
-    // Hide initial loading and show authentication gate
+    // Hide initial loading state
     hideInitialLoadingState();
-    updateUserInterface(false);
 
-    // Event listener will be set up in DOMContentLoaded
+    // Initialize main UI components
+    initializeMainUI();
+
+    console.log("Extension initialized successfully");
   } catch (error) {
     console.error("Failed to initialize extension:", error);
-    stopSessionLoading();
     hideInitialLoadingState();
-    updateUserInterface(false);
-  }
-}
-
-/**
- * Setup authentication event listeners
- */
-function setupAuthEventListeners() {
-  // Sign in form
-  const signinSubmitBtn = document.getElementById("signin-submit-btn");
-  if (signinSubmitBtn) {
-    signinSubmitBtn.addEventListener("click", handleSignIn);
-  }
-
-  // Sign up form
-  const signupSubmitBtn = document.getElementById("signup-submit-btn");
-  if (signupSubmitBtn) {
-    signupSubmitBtn.addEventListener("click", handleSignUp);
-  }
-
-  // Form switching
-  const showSignupLink = document.getElementById("show-signup");
-  if (showSignupLink) {
-    showSignupLink.addEventListener("click", (e) => {
-      e.preventDefault();
-      showSignUpForm();
-    });
-  }
-
-  const showSigninLink = document.getElementById("show-signin");
-  if (showSigninLink) {
-    showSigninLink.addEventListener("click", (e) => {
-      e.preventDefault();
-      showSignInForm();
-    });
-  }
-
-  // Password toggle buttons
-  setupPasswordToggleListeners();
-}
-
-/**
- * Setup password toggle event listeners
- */
-function setupPasswordToggleListeners() {
-  const passwordToggles = document.querySelectorAll(".password-toggle");
-  console.log(
-    "Setting up password toggle listeners for",
-    passwordToggles.length,
-    "buttons"
-  );
-
-  passwordToggles.forEach((toggle, index) => {
-    // Remove any existing listeners to avoid duplicates
-    toggle.removeEventListener("click", handlePasswordToggle);
-    toggle.addEventListener("click", handlePasswordToggle);
-    console.log("Added listener to toggle button", index + 1);
-  });
-}
-
-/**
- * Handle password toggle click
- */
-function handlePasswordToggle(e) {
-  e.preventDefault();
-  console.log("Password toggle clicked");
-
-  const input = e.target
-    .closest(".password-field")
-    .querySelector('input[type="password"], input[type="text"]');
-  if (input) {
-    console.log("Toggling password for input:", input.id);
-    togglePasswordVisibility(input.id);
-  } else {
-    console.error("Input not found for password toggle");
-  }
-}
-
-/**
- * Show sign up form
- */
-function showSignUpForm() {
-  const signinFields = document.getElementById("signin-fields");
-  const signupFields = document.getElementById("signup-fields");
-  const signinBtn = document.getElementById("signin-submit-btn");
-  const signupBtn = document.getElementById("signup-submit-btn");
-  const signinSwitchText = document.getElementById("signin-switch-text");
-  const signupSwitchText = document.getElementById("signup-switch-text");
-  const showSignupLink = document.getElementById("show-signup");
-  const showSigninLink = document.getElementById("show-signin");
-
-  if (signinFields && signupFields) {
-    signinFields.classList.add("hidden");
-    signupFields.classList.remove("hidden");
-    signinBtn.classList.add("hidden");
-    signupBtn.classList.remove("hidden");
-    signinSwitchText.classList.add("hidden");
-    signupSwitchText.classList.remove("hidden");
-    showSignupLink.classList.add("hidden");
-    showSigninLink.classList.remove("hidden");
-    // Re-setup password toggle listeners for the new form
-    setTimeout(() => setupPasswordToggleListeners(), 100);
-  }
-}
-
-/**
- * Show sign in form
- */
-function showSignInForm() {
-  const signinFields = document.getElementById("signin-fields");
-  const signupFields = document.getElementById("signup-fields");
-  const signinBtn = document.getElementById("signin-submit-btn");
-  const signupBtn = document.getElementById("signup-submit-btn");
-  const signinSwitchText = document.getElementById("signin-switch-text");
-  const signupSwitchText = document.getElementById("signup-switch-text");
-  const showSignupLink = document.getElementById("show-signup");
-  const showSigninLink = document.getElementById("show-signin");
-
-  if (signinFields && signupFields) {
-    signupFields.classList.add("hidden");
-    signinFields.classList.remove("hidden");
-    signupBtn.classList.add("hidden");
-    signinBtn.classList.remove("hidden");
-    signupSwitchText.classList.add("hidden");
-    signinSwitchText.classList.remove("hidden");
-    showSigninLink.classList.add("hidden");
-    showSignupLink.classList.remove("hidden");
-    // Re-setup password toggle listeners for the new form
-    setTimeout(() => setupPasswordToggleListeners(), 100);
-  }
-}
-
-/**
- * Handle sign in
- */
-async function handleSignIn() {
-  try {
-    const email = document.getElementById("signin-email").value.trim();
-    const password = document.getElementById("signin-password").value.trim();
-
-    // Validate form
-    if (!email || !password) {
-      setStatus("❌ Veuillez remplir tous les champs.");
-      return;
-    }
-
-    if (!isValidEmail(email)) {
-      setStatus("❌ Veuillez entrer une adresse email valide.");
-      return;
-    }
-
-    // Start authentication loading
-    startAuthLoading();
-
-    // Call the real authentication API
-    try {
-      await authenticateUser(email, password, "signin");
-      stopAuthLoading();
-    } catch (error) {
-      stopAuthLoading();
-      console.error("Sign in error:", error);
-      // Error handling is already done in authenticateUser function
-    }
-  } catch (error) {
-    stopAuthLoading();
-    console.error("Sign in error:", error);
-    setStatus("❌ Échec de la connexion. Veuillez réessayer.");
-  }
-}
-
-/**
- * Handle sign up
- */
-async function handleSignUp() {
-  try {
-    const name = document.getElementById("signup-name").value.trim();
-    const email = document.getElementById("signup-email").value.trim();
-    const password = document.getElementById("signup-password").value.trim();
-    const confirmPassword = document
-      .getElementById("signup-confirm-password")
-      .value.trim();
-
-    // Validate form
-    if (!name || !email || !password || !confirmPassword) {
-      setStatus("❌ Veuillez remplir tous les champs.");
-      return;
-    }
-
-    if (!isValidEmail(email)) {
-      setStatus("❌ Veuillez entrer une adresse email valide.");
-      return;
-    }
-
-    if (password.length < 6) {
-      setStatus("❌ Le mot de passe doit contenir au moins 6 caractères.");
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      setStatus("❌ Les mots de passe ne correspondent pas.");
-      return;
-    }
-
-    // Start authentication loading
-    startAuthLoading();
-
-    // Call the real authentication API
-    try {
-      await authenticateUser(email, password, "signup", name);
-      stopAuthLoading();
-    } catch (error) {
-      stopAuthLoading();
-      console.error("Sign up error:", error);
-      // Error handling is already done in authenticateUser function
-    }
-  } catch (error) {
-    stopAuthLoading();
-    console.error("Sign up error:", error);
-    setStatus("❌ Échec de la création du compte. Veuillez réessayer.");
-  }
-}
-
-/**
- * Validate email format
- */
-function isValidEmail(email) {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
-}
-
-/**
- * Authenticate user with real backend API
- */
-async function authenticateUser(email, password, type, name = null) {
-  try {
-    const API_BASE_URL = "https://try-on-server-v1.onrender.com";
-    const endpoint =
-      type === "signup" ? "/api/auth/register" : "/api/auth/login";
-    const requestBody =
-      type === "signup" ? { name, email, password } : { email, password };
-
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(requestBody),
-    });
-
-    const data = await response.json();
-
-    // Check if response is ok (status 200-299) but API returned success: false
-    if (!response.ok) {
-      // Handle HTTP error status codes
-      let statusErrorMessage = "❌ ";
-
-      switch (response.status) {
-        case 400:
-          statusErrorMessage += "Données invalides. Vérifiez vos informations.";
-          break;
-        case 401:
-          statusErrorMessage += "Email ou mot de passe incorrect.";
-          break;
-        case 403:
-          statusErrorMessage += "Accès refusé. Compte non autorisé.";
-          break;
-        case 404:
-          statusErrorMessage +=
-            "Service non trouvé. Vérifiez la configuration.";
-          break;
-        case 409:
-          statusErrorMessage += "Ce compte existe déjà.";
-          break;
-        case 422:
-          statusErrorMessage += "Données de validation incorrectes.";
-          break;
-        case 429:
-          statusErrorMessage += "Trop de tentatives. Veuillez patienter.";
-          break;
-        case 500:
-          statusErrorMessage += "Erreur serveur. Veuillez réessayer plus tard.";
-          break;
-        case 503:
-          statusErrorMessage += "Service temporairement indisponible.";
-          break;
-        default:
-          statusErrorMessage += `Erreur serveur (${response.status}). Veuillez réessayer.`;
-      }
-
-      setStatus(statusErrorMessage);
-
-      // Clear error message after 6 seconds
-      setTimeout(() => {
-        if (statusDiv.textContent.includes("❌")) {
-          setStatus("");
-        }
-      }, 6000);
-
-      return;
-    }
-
-    if (data.success) {
-      // Store user data and token
-      currentUser = data.data.user;
-      currentUser.accessToken = data.data.token;
-      currentUser.loginTime = Date.now();
-
-      // Save to storage
-      await saveToStorage(STORAGE_KEYS.USER_AUTH, currentUser);
-
-      // Show success message with user name first
-      const message =
-        type === "signup"
-          ? `✅ Compte créé avec succès ! Bienvenue, ${currentUser.name}`
-          : `✅ Connexion réussie ! Bienvenue, ${currentUser.name}`;
-
-      setStatus(message);
-
-      // Update UI after showing success message
-      updateUserInterface(true);
-
-      // Clear form fields
-      clearAuthForms();
-
-      // Clear status after 4 seconds
-      setTimeout(() => {
-        if (
-          statusDiv.textContent.includes("réussi") ||
-          statusDiv.textContent.includes("créé")
-        ) {
-          setStatus("");
-        }
-      }, 4000);
-    } else {
-      // Handle API error response with detailed error messages
-      console.log("API returned success: false, data:", data);
-
-      let errorMessage = "❌ ";
-
-      // Check for different error formats from API
-      if (data.message) {
-        errorMessage += data.message;
-        console.log("Using data.message:", data.message);
-      } else if (data.error) {
-        errorMessage += data.error;
-        console.log("Using data.error:", data.error);
-      } else if (data.errors) {
-        // Handle validation errors object
-        const errorKeys = Object.keys(data.errors);
-        if (errorKeys.length > 0) {
-          const firstError = data.errors[errorKeys[0]];
-          if (Array.isArray(firstError)) {
-            errorMessage += firstError[0]; // Get first error message from array
-          } else {
-            errorMessage += firstError;
-          }
-        } else {
-          errorMessage += "Une erreur s'est produite";
-        }
-      } else if (data.error_message) {
-        // Handle nested error_message structure
-        if (typeof data.error_message === "string") {
-          errorMessage += data.error_message;
-        } else if (data.error_message.message) {
-          errorMessage += data.error_message.message;
-        } else {
-          errorMessage += "Une erreur s'est produite";
-        }
-      } else {
-        errorMessage += "Une erreur s'est produite";
-      }
-
-      console.log("Final error message:", errorMessage);
-      setStatus(errorMessage);
-      console.log(
-        "Status set, current statusDiv content:",
-        statusDiv.textContent
-      );
-      console.log("Status div display style:", statusDiv.style.display);
-      console.log(
-        "Status div visibility:",
-        window.getComputedStyle(statusDiv).visibility
-      );
-      console.log(
-        "Auth gate display:",
-        document.getElementById("auth-gate")?.style.display
-      );
-      console.log(
-        "Main content display:",
-        document.getElementById("main-content")?.style.display
-      );
-
-      // Clear error message after 6 seconds
-      setTimeout(() => {
-        if (statusDiv.textContent.includes("❌")) {
-          setStatus("");
-        }
-      }, 6000);
-    }
-  } catch (error) {
-    console.error("Authentication error:", error);
-
-    // Handle different types of errors
-    let errorMessage = "❌ ";
-
-    if (error.name === "TypeError" && error.message.includes("fetch")) {
-      // Network error
-      errorMessage +=
-        "Erreur de connexion au serveur. Vérifiez votre connexion internet.";
-    } else if (error.name === "SyntaxError") {
-      // JSON parsing error
-      errorMessage += "Erreur de communication avec le serveur.";
-    } else if (error.message) {
-      // Other errors with messages
-      errorMessage += error.message;
-    } else {
-      // Generic error
-      errorMessage += "Erreur de connexion. Veuillez réessayer.";
-    }
-
-    setStatus(errorMessage);
-
-    // Clear error message after 6 seconds
-    setTimeout(() => {
-      if (statusDiv.textContent.includes("❌")) {
-        setStatus("");
-      }
-    }, 6000);
-  }
-}
-
-/**
- * Clear authentication form fields
- */
-function clearAuthForms() {
-  // Clear signin form
-  const signinEmail = document.getElementById("signin-email");
-  const signinPassword = document.getElementById("signin-password");
-  if (signinEmail) signinEmail.value = "";
-  if (signinPassword) signinPassword.value = "";
-
-  // Clear signup form
-  const signupName = document.getElementById("signup-name");
-  const signupEmail = document.getElementById("signup-email");
-  const signupPassword = document.getElementById("signup-password");
-  const signupConfirmPassword = document.getElementById(
-    "signup-confirm-password"
-  );
-
-  if (signupName) signupName.value = "";
-  if (signupEmail) signupEmail.value = "";
-  if (signupPassword) signupPassword.value = "";
-  if (signupConfirmPassword) signupConfirmPassword.value = "";
-}
-
-/**
- * Toggle password visibility
- */
-function togglePasswordVisibility(inputId) {
-  const input = document.getElementById(inputId);
-  if (!input) {
-    console.error("Input element not found:", inputId);
-    return;
-  }
-
-  const toggleButton = input.parentElement.querySelector(".password-toggle");
-  if (!toggleButton) {
-    console.error("Toggle button not found for input:", inputId);
-    return;
-  }
-
-  const eyeIcon = toggleButton.querySelector(".eye-icon");
-  if (!eyeIcon) {
-    console.error("Eye icon not found for input:", inputId);
-    return;
-  }
-
-  if (input.type === "password") {
-    input.type = "text";
-    // Change to eye-off icon
-    eyeIcon.innerHTML = `
-      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      <line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-    `;
-    toggleButton.setAttribute("aria-label", "Hide password");
-  } else {
-    input.type = "password";
-    // Change back to eye icon
-    eyeIcon.innerHTML = `
-      <path d="M1 12S5 4 12 4s11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-    `;
-    toggleButton.setAttribute("aria-label", "Show password");
-  }
-}
-
-/**
- * Verify token using backend API
- */
-async function verifyToken(token) {
-  try {
-    if (!token || typeof token !== "string") {
-      console.error("Invalid access token for verification");
-      return false;
-    }
-
-    const API_BASE_URL = "https://try-on-server-v1.onrender.com";
-    const response = await fetch(`${API_BASE_URL}/api/auth/validate`, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-    });
-
-    const data = await response.json();
-
-    if (data.success) {
-      // Update user data with latest info from server
-      if (data.data.user) {
-        currentUser = data.data.user;
-        currentUser.accessToken = data.data.token;
-        await saveToStorage(STORAGE_KEYS.USER_AUTH, currentUser);
-        console.log("User session restored and saved to storage");
-      }
-      return true;
-    } else {
-      console.log("Token validation failed:", data.message);
-      return false;
-    }
-  } catch (error) {
-    console.error("Token verification error:", error);
-    return false;
-  }
-}
-
-/**
- * Handle sign out with backend API
- */
-async function handleSignOut() {
-  try {
-    setStatus("👋 Déconnexion en cours...");
-
-    // Call logout API if user is authenticated
-    if (currentUser && currentUser.accessToken) {
-      try {
-        const API_BASE_URL = "https://try-on-server-v1.onrender.com";
-        const response = await fetch(`${API_BASE_URL}/api/auth/logout`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${currentUser.accessToken}`,
-            "Content-Type": "application/json",
-          },
-        });
-
-        const data = await response.json();
-        if (!data.success) {
-          console.log("Logout API error:", data.message);
-        }
-      } catch (error) {
-        console.log("Could not call logout API:", error);
-        // Continue with local logout even if API call fails
-      }
-    }
-
-    // Clear user data
-    currentUser = null;
-    await clearStorageKey(STORAGE_KEYS.USER_AUTH);
-
-    // Update UI
-    updateUserInterface(false);
-
-    setStatus("👋 Déconnexion réussie !");
-
-    // Clear status after 2 seconds
-    setTimeout(() => {
-      if (statusDiv.textContent.includes("Déconnexion réussie")) {
-        setStatus("");
-      }
-    }, 2000);
-  } catch (error) {
-    console.error("Sign-out error:", error);
-    setStatus("❌ Erreur lors de la déconnexion.");
   }
 }
 
@@ -1422,120 +718,6 @@ function generateInitials(name) {
 }
 
 /**
- * Update user avatar with fallback to initials
- */
-function updateUserAvatar(avatarUrl, userName) {
-  if (avatarUrl && avatarUrl.trim() !== "") {
-    // Show avatar image
-    userAvatar.src = avatarUrl;
-    userAvatar.alt = userName || "Avatar utilisateur";
-    userAvatar.classList.remove("hidden");
-    userAvatarFallback.classList.add("hidden");
-
-    // Add error handler for broken images
-    userAvatar.onerror = () => {
-      console.log("Avatar image failed to load, showing initials");
-      showInitialsFallback(userName);
-    };
-  } else {
-    // Show initials fallback
-    showInitialsFallback(userName);
-  }
-}
-
-/**
- * Show initials fallback when avatar image is not available or broken
- * @param {string} userName - User's name to generate initials from
- */
-function showInitialsFallback(userName) {
-  const initials = generateInitials(userName);
-
-  // Hide avatar image
-  userAvatar.classList.add("hidden");
-
-  // Show fallback with initials
-  userAvatarFallback.classList.remove("hidden");
-  userAvatarFallback.innerHTML = `<span class="avatar-initials">${initials}</span>`;
-
-  console.log(`Showing initials fallback: ${initials} for user: ${userName}`);
-}
-
-/**
- * Update user interface based on authentication state
- */
-function updateUserInterface(isAuthenticated) {
-  console.log(
-    "updateUserInterface called with:",
-    isAuthenticated,
-    "currentUser:",
-    currentUser ? currentUser.name : "null"
-  );
-
-  if (isAuthenticated && currentUser) {
-    console.log("Showing main UI for user:", currentUser.name);
-
-    // Hide authentication gate with smooth transition
-    authGate.style.display = "none";
-    authGate.classList.add("hidden");
-
-    // Show main content with smooth transition
-    mainContent.style.display = "block";
-    mainContent.classList.remove("hidden");
-
-    // Add a small delay to ensure smooth transition
-    setTimeout(() => {
-      mainContent.style.opacity = "1";
-      mainContent.style.transform = "translateY(0)";
-    }, 50);
-
-    // Update user info
-    userName.textContent = currentUser.name;
-    userEmail.textContent = currentUser.email;
-
-    // Update avatar with fallback to initials
-    updateUserAvatar(currentUser.picture, currentUser.name);
-
-    // Add sign-out event listener
-    signoutBtn.addEventListener("click", handleSignOut);
-
-    // Show user profile section
-    userProfile.classList.remove("hidden");
-
-    // Initialize main UI components
-    initializeMainUI();
-
-    console.log("Main UI displayed - User authenticated:", currentUser.name);
-  } else {
-    console.log("Showing authentication gate");
-
-    // Show authentication gate with smooth transition
-    authGate.style.display = "block";
-    authGate.classList.remove("hidden");
-
-    // Hide main content with smooth transition
-    mainContent.style.opacity = "0";
-    mainContent.style.transform = "translateY(20px)";
-
-    setTimeout(() => {
-      mainContent.style.display = "none";
-      mainContent.classList.add("hidden");
-    }, 300);
-
-    // Hide user profile section
-    userProfile.classList.add("hidden");
-
-    console.log("Authentication gate displayed - User not authenticated");
-  }
-}
-
-/**
- * Get current user information
- */
-function getCurrentUser() {
-  return currentUser;
-}
-
-/**
  * Initialize main UI components after successful authentication
  * This ensures all UI elements are properly set up and ready for use
  */
@@ -1546,6 +728,9 @@ function initializeMainUI() {
 
     // Initialize form state
     updateGenerateButtonState();
+
+    // Setup demo picture listeners
+    setupDemoPictureListeners();
 
     // Ensure proper initial display
     if (mainContent && !mainContent.classList.contains("hidden")) {
@@ -1566,13 +751,6 @@ function initializeMainUI() {
 }
 
 /**
- * Check if user is authenticated
- */
-function isUserAuthenticated() {
-  return currentUser && currentUser.accessToken;
-}
-
-/**
  * Reset all button states to enabled
  */
 function resetButtonStates() {
@@ -1584,28 +762,6 @@ function resetButtonStates() {
   console.log("All button states reset to enabled");
 }
 
-/**
- * Test logout functionality
- */
-async function testLogout() {
-  console.log("Testing logout functionality...");
-  console.log("Before logout - isAuthenticated:", isUserAuthenticated());
-  console.log("Before logout - currentUser:", currentUser);
-
-  await handleGoogleSignOut();
-
-  // Wait a moment for logout to complete
-  setTimeout(() => {
-    console.log("After logout - isAuthenticated:", isUserAuthenticated());
-    console.log("After logout - currentUser:", currentUser);
-
-    // Check storage
-    chrome.storage.local.get([STORAGE_KEYS.USER_AUTH]).then((result) => {
-      console.log("After logout - storage:", result);
-    });
-  }, 1000);
-}
-
 // --- Handlers ---
 
 /**
@@ -1614,6 +770,11 @@ async function testLogout() {
 async function handlePersonImageSelection() {
   const file = personImageInput.files[0];
   if (file) {
+    // Clear demo picture selections when user uploads their own file
+    document.querySelectorAll(".demo-picture-item").forEach((item) => {
+      item.classList.remove("selected");
+    });
+
     const reader = new FileReader();
     reader.onload = async (e) => {
       personPreviewImage.src = e.target.result;
@@ -1622,6 +783,14 @@ async function handlePersonImageSelection() {
       document
         .getElementById("person-upload-container")
         .classList.add("hidden");
+
+      // Hide the entire photo selection container when user uploads their own file
+      const photoSelectionContainer = document.getElementById(
+        "photo-selection-container"
+      );
+      if (photoSelectionContainer) {
+        photoSelectionContainer.style.display = "none";
+      }
 
       // Save the uploaded image to storage
       await saveUploadedImage(file);
@@ -1644,14 +813,6 @@ async function handlePersonImageSelection() {
     // Update layout state
     updateGenerateButtonState();
   }
-}
-
-/**
- * Handles clicking on the person file picker button to change selection
- */
-async function handlePersonPreviewClick() {
-  // Trigger the file input dialog
-  personImageInput.click();
 }
 
 /**
@@ -1715,25 +876,6 @@ async function handleImageSelection(url) {
 
   // Save the selected clothing URL to storage
   await saveToStorage(STORAGE_KEYS.SELECTED_CLOTHING_URL, url);
-
-  // Update layout state
-  updateGenerateButtonState();
-}
-
-/**
- * Handles clicking on the clothing selection button to change selection
- */
-async function handleClothingPreviewClick() {
-  // Reset selection
-  selectedClothingUrl = null;
-  previewImage.src = "";
-
-  // Update UI
-  previewContainer.classList.add("hidden");
-  galleryContainer.classList.remove("hidden");
-
-  // Clear the selected clothing URL from storage
-  await clearStorageKey(STORAGE_KEYS.SELECTED_CLOTHING_URL);
 
   // Update layout state
   updateGenerateButtonState();
@@ -2202,14 +1344,6 @@ function addProductDetailsToCollage(
  * Handles downloading just the generated result image (single image).
  */
 async function handleDownloadResultImage() {
-  // Check if user is authenticated
-  if (!isUserAuthenticated()) {
-    setStatus(
-      "🔐 Veuillez vous connecter avec Google pour télécharger des images."
-    );
-    return;
-  }
-
   if (!resultImage.src) {
     setStatus("Aucune image à télécharger.");
     return;
@@ -2265,14 +1399,6 @@ async function handleDownloadResultImage() {
  * Handles downloading the generated collage with all images and product details.
  */
 async function handleDownloadImage() {
-  // Check if user is authenticated
-  if (!isUserAuthenticated()) {
-    setStatus(
-      "🔐 Veuillez vous connecter avec Google pour télécharger des images."
-    );
-    return;
-  }
-
   if (!resultImage.src) {
     setStatus("Aucune image à télécharger.");
     return;
@@ -2341,14 +1467,6 @@ async function handleDownloadImage() {
  * Handles the Buy Now button click
  */
 function handleBuyNow() {
-  // Check if user is authenticated
-  if (!isUserAuthenticated()) {
-    setStatus(
-      "🔐 Veuillez vous connecter avec Google pour effectuer un achat."
-    );
-    return;
-  }
-
   if (!selectedClothingUrl) {
     setStatus("📸 Veuillez d'abord sélectionner un article de vêtement.");
     return;
@@ -2372,14 +1490,6 @@ function handleBuyNow() {
  * Handles the Add to Cart button click
  */
 async function handleAddToCart() {
-  // Check if user is authenticated
-  if (!isUserAuthenticated()) {
-    setStatus(
-      "🔐 Veuillez vous connecter avec Google pour ajouter des articles au panier."
-    );
-    return;
-  }
-
   if (!selectedClothingUrl) {
     setStatus("📸 Veuillez d'abord sélectionner un article de vêtement.");
     return;
@@ -3394,12 +2504,6 @@ async function refreshCartItemInfo() {
  * Handle cart modal open/close
  */
 function openCartModal() {
-  // Check if user is authenticated
-  if (!isUserAuthenticated()) {
-    setStatus("🔐 Veuillez vous connecter avec Google pour accéder au panier.");
-    return;
-  }
-
   cartModal.classList.remove("hidden");
 
   // Refresh product information for items in cart
@@ -3443,14 +2547,6 @@ async function handleCheckout() {
 async function handleFormSubmit(event) {
   event.preventDefault();
 
-  // Check if user is authenticated
-  if (!isUserAuthenticated()) {
-    setStatus(
-      "🔐 Veuillez vous connecter avec Google pour utiliser cette fonctionnalité."
-    );
-    return;
-  }
-
   if (!personImageInput.files[0] || !selectedClothingUrl) {
     setStatus(
       "📸 Veuillez télécharger votre photo et sélectionner un article de vêtement pour continuer."
@@ -3486,13 +2582,6 @@ async function handleFormSubmit(event) {
     formData.append("personImage", personImageInput.files[0]);
     // Give the blob a filename so the server's 'multer' can process it
     formData.append("clothingImage", clothingBlob, "clothing-item.jpg");
-
-    // Add user information if authenticated
-    if (isUserAuthenticated()) {
-      formData.append("userId", currentUser.id);
-      formData.append("email", currentUser.email);
-      formData.append("name", currentUser.name);
-    }
 
     // Step 3: Send to the backend (expects JSON response)
     setStatus("💫 Laissez-nous faire la magie... Cela peut prendre un moment.");
@@ -3618,17 +2707,232 @@ async function restorePreviousSession() {
 
       // Update button states after restoration
       updateGenerateButtonState();
-
-      // Clear status message after a few seconds
-      setTimeout(() => {
-        if (statusDiv.textContent.includes("Session précédente restaurée")) {
-          setStatus("");
-        }
-      }, 3000);
     }
   } catch (error) {
     console.error("Failed to restore previous session:", error);
   }
+}
+
+/**
+ * Handle demo picture selection
+ */
+async function handleDemoPictureSelection(demoSrc) {
+  try {
+    // Remove selection from all demo pictures
+    document.querySelectorAll(".demo-picture-item").forEach((item) => {
+      item.classList.remove("selected");
+    });
+
+    // Add selection to clicked picture
+    const selectedItem = document.querySelector(`[data-demo-src="${demoSrc}"]`);
+    if (selectedItem) {
+      selectedItem.classList.add("selected");
+    }
+
+    // Create a File object from the demo image
+    const response = await fetch(demoSrc);
+    const blob = await response.blob();
+    const file = new File([blob], "demo-image.jpg", { type: blob.type });
+
+    // Create a FileList-like object and assign it to the input
+    const dataTransfer = new DataTransfer();
+    dataTransfer.items.add(file);
+    personImageInput.files = dataTransfer.files;
+
+    // Show preview and hide upload area
+    personPreviewImage.src = demoSrc;
+    personPreviewContainer.classList.remove("hidden");
+    document.getElementById("person-upload-container").classList.add("hidden");
+
+    // Hide the entire photo selection container when demo image is selected
+    const photoSelectionContainer = document.getElementById(
+      "photo-selection-container"
+    );
+    if (photoSelectionContainer) {
+      photoSelectionContainer.style.display = "none";
+    }
+
+    // Save the demo image to storage
+    await saveUploadedImage(file);
+
+    // Update layout state
+    updateGenerateButtonState();
+
+    setStatus("✅ Photo de démonstration sélectionnée !");
+  } catch (error) {
+    console.error("Error loading demo picture:", error);
+    setStatus("❌ Erreur lors du chargement de la photo de démonstration.");
+  }
+}
+
+/**
+ * Setup demo picture event listeners
+ */
+function setupDemoPictureListeners() {
+  const demoPictureItems = document.querySelectorAll(".demo-picture-item");
+
+  demoPictureItems.forEach((item) => {
+    item.addEventListener("click", () => {
+      const demoSrc = item.getAttribute("data-demo-src");
+      if (demoSrc) {
+        handleDemoPictureSelection(demoSrc);
+      }
+    });
+
+    // Add keyboard accessibility
+    item.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        const demoSrc = item.getAttribute("data-demo-src");
+        if (demoSrc) {
+          handleDemoPictureSelection(demoSrc);
+        }
+      }
+    });
+
+    // Make items focusable
+    item.setAttribute("tabindex", "0");
+    item.setAttribute("role", "button");
+    item.setAttribute(
+      "aria-label",
+      `Sélectionner ${item.querySelector(".demo-picture-label").textContent}`
+    );
+  });
+
+  // Setup clear selection button
+  const clearPersonImageBtn = document.getElementById("clear-person-image-btn");
+  if (clearPersonImageBtn) {
+    clearPersonImageBtn.addEventListener("click", handleClearPersonImage);
+    clearPersonImageBtn.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        handleClearPersonImage();
+      }
+    });
+  }
+
+  // Setup clear clothing selection button
+  const clearClothingImageBtn = document.getElementById(
+    "clear-clothing-image-btn"
+  );
+  if (clearClothingImageBtn) {
+    clearClothingImageBtn.addEventListener("click", handleClearClothingImage);
+    clearClothingImageBtn.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        handleClearClothingImage();
+      }
+    });
+  }
+}
+
+/**
+ * Recreate the demo pictures section
+ */
+function recreateDemoPicturesSection() {
+  const photoSelectionContainer = document.getElementById(
+    "photo-selection-container"
+  );
+  if (!photoSelectionContainer) return;
+
+  // Check if demo pictures section already exists
+  const existingDemoSection = document.querySelector(".demo-pictures-section");
+  if (existingDemoSection) return;
+
+  // Create the demo pictures section HTML
+  const demoPicturesHTML = `
+    <div class="demo-pictures-section">
+      <div class="demo-pictures-grid">
+        <div class="demo-picture-item" data-demo-src="demo_pics/Audrey-Fleurot.jpg">
+          <img src="demo_pics/Audrey-Fleurot.jpg" alt="Demo Photo 1" class="demo-picture" />
+          <div class="demo-picture-overlay">
+            <span class="demo-picture-label">Audrey</span>
+          </div>
+        </div>
+        <div class="demo-picture-item" data-demo-src="demo_pics/french_man.webp">
+          <img src="demo_pics/french_man.webp" alt="Demo Photo 2" class="demo-picture" />
+          <div class="demo-picture-overlay">
+            <span class="demo-picture-label">French Man</span>
+          </div>
+        </div>
+        <div class="demo-picture-item" data-demo-src="demo_pics/frwm2.webp">
+          <img src="demo_pics/frwm2.webp" alt="Demo Photo 3" class="demo-picture" />
+          <div class="demo-picture-overlay">
+            <span class="demo-picture-label">Model 1</span>
+          </div>
+        </div>
+        <div class="demo-picture-item" data-demo-src="demo_pics/frwm3.jpg">
+          <img src="demo_pics/frwm3.jpg" alt="Demo Photo 4" class="demo-picture" />
+          <div class="demo-picture-overlay">
+            <span class="demo-picture-label">Model 2</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Insert the demo pictures section into the container
+  photoSelectionContainer.insertAdjacentHTML("beforeend", demoPicturesHTML);
+
+  // Setup event listeners for the new demo pictures
+  setupDemoPictureListeners();
+}
+
+/**
+ * Handle clearing the person image selection
+ */
+async function handleClearPersonImage() {
+  // Clear file input
+  personImageInput.value = "";
+
+  // Clear demo picture selections
+  document.querySelectorAll(".demo-picture-item").forEach((item) => {
+    item.classList.remove("selected");
+  });
+
+  // Hide preview and show upload area
+  personPreviewContainer.classList.add("hidden");
+  document.getElementById("person-upload-container").classList.remove("hidden");
+
+  // Show the photo selection container again when selection is cleared
+  const photoSelectionContainer = document.getElementById(
+    "photo-selection-container"
+  );
+  if (photoSelectionContainer) {
+    photoSelectionContainer.style.display = "flex";
+  }
+
+  // Recreate demo pictures section when selection is cleared
+  recreateDemoPicturesSection();
+
+  // Clear the uploaded image from storage
+  await clearStorageKey(STORAGE_KEYS.UPLOADED_IMAGE);
+
+  // Update layout state
+  updateGenerateButtonState();
+
+  setStatus("🔄 Sélection effacée. Choisissez une nouvelle photo.");
+}
+
+/**
+ * Handle clearing the clothing image selection
+ */
+async function handleClearClothingImage() {
+  // Reset clothing selection
+  selectedClothingUrl = null;
+  previewImage.src = "";
+
+  // Update UI
+  previewContainer.classList.add("hidden");
+  galleryContainer.classList.remove("hidden");
+
+  // Clear the selected clothing URL from storage
+  await clearStorageKey(STORAGE_KEYS.SELECTED_CLOTHING_URL);
+
+  // Update layout state
+  updateGenerateButtonState();
+
+  setStatus("🔄 Sélection de vêtement effacée. Choisissez un nouvel article.");
 }
 
 // --- Event Listeners ---
@@ -3649,14 +2953,6 @@ addToCartButton.addEventListener("click", handleAddToCart);
 tryInStoreButton?.addEventListener("click", handleTryInStore);
 
 // Google Sign-In is handled by the JavaScript Library automatically
-
-signoutBtn.addEventListener("click", handleSignOut);
-signoutBtn.addEventListener("keydown", (e) => {
-  if (e.key === "Enter" || e.key === " ") {
-    e.preventDefault();
-    handleSignOut();
-  }
-});
 
 // Cart event listeners
 cartButton.addEventListener("click", openCartModal);
@@ -3727,12 +3023,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Show initial loading state immediately to prevent auth gate flash
   showInitialLoadingState();
 
-  // Make togglePasswordVisibility globally available
-  window.togglePasswordVisibility = togglePasswordVisibility;
-
-  // Set up authentication event listeners
-  setupAuthEventListeners();
-
   // Set current year dynamically
   const currentYearElement = document.getElementById("current-year");
   if (currentYearElement) {
@@ -3753,33 +3043,20 @@ document.addEventListener("DOMContentLoaded", async () => {
     updateCartCount();
   }
 
-  // Add click event listeners for preview action buttons
-  if (clothingSelectionBtn) {
-    clothingSelectionBtn.addEventListener("click", handleClothingPreviewClick);
-    clothingSelectionBtn.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" || e.key === " ") {
-        e.preventDefault();
-        handleClothingPreviewClick();
-      }
-    });
-  }
-
-  if (personFilePickerBtn) {
-    personFilePickerBtn.addEventListener("click", handlePersonPreviewClick);
-    personFilePickerBtn.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" || e.key === " ") {
-        e.preventDefault();
-        handlePersonPreviewClick();
-      }
-    });
-  }
-
   // Set initial state - show upload container if no image is selected
   if (!personImageInput.files.length) {
     document
       .getElementById("person-upload-container")
       .classList.remove("hidden");
     personPreviewContainer.classList.add("hidden");
+  } else {
+    // If there's already a selected image, hide the photo selection container
+    const photoSelectionContainer = document.getElementById(
+      "photo-selection-container"
+    );
+    if (photoSelectionContainer) {
+      photoSelectionContainer.style.display = "none";
+    }
   }
 
   // Initialize the extension first (this handles user session restoration)

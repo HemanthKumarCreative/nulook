@@ -18,88 +18,6 @@
         </div>
       </div>
       <div class="header-actions">
-        <!-- User Authentication Section -->
-        <div id="user-auth-section" class="user-auth-section">
-          <!-- User Profile (shown when authenticated) -->
-          <div id="user-profile" class="user-profile hidden">
-            <div class="user-info">
-              <div class="user-avatar-container">
-                <img
-                  id="user-avatar"
-                  src=""
-                  alt="Avatar utilisateur"
-                  class="user-avatar"
-                />
-                <div
-                  id="user-avatar-fallback"
-                  class="user-avatar-fallback hidden"
-                >
-                  <svg
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    />
-                    <circle
-                      cx="12"
-                      cy="7"
-                      r="4"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    />
-                  </svg>
-                </div>
-              </div>
-              <div class="user-details">
-                <span id="user-name" class="user-name"></span>
-                <span id="user-email" class="user-email"></span>
-              </div>
-            </div>
-            <button id="signout-btn" class="signout-btn" title="Se déconnecter">
-              <svg
-                class="signout-icon"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M9 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H9"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-                <path
-                  d="M16 17L21 12L16 7"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-                <path
-                  d="M21 12H9"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-              </svg>
-            </button>
-          </div>
-        </div>
-
         <button id="cart-btn" class="cart-btn" title="Voir le panier">
           <span class="cart-icon">🛍️</span>
           <span id="cart-count" class="cart-count hidden">0</span>
@@ -110,222 +28,8 @@
     <!-- Status Messages - Always visible -->
     <div id="status" class="status-message"></div>
 
-    <!-- Authentication Gate -->
-    <div id="auth-gate" class="auth-gate">
-      <div class="auth-gate-content">
-        <!-- Left Side: Icon and Text -->
-        <div class="auth-gate-left">
-          <div class="auth-gate-icon">🔐</div>
-          <h2 class="auth-gate-title">Connexion Requise</h2>
-          <p class="auth-gate-description">
-            Connectez-vous avec Google pour accéder à l'essayage virtuel
-            alimenté par IA
-          </p>
-        </div>
-
-        <!-- Right Side: Authentication Forms -->
-        <div class="auth-gate-right">
-          <div class="auth-forms">
-            <!-- Input Fields Container -->
-            <div class="form-fields-container">
-              <!-- Sign In Form Fields -->
-              <div id="signin-fields" class="form-fields">
-                <div class="form-group floating-label">
-                  <input
-                    type="email"
-                    id="signin-email"
-                    class="form-input"
-                    placeholder=" "
-                    required
-                  />
-                  <label for="signin-email" class="form-label">Email</label>
-                </div>
-                <div class="form-group floating-label password-field">
-                  <input
-                    type="password"
-                    id="signin-password"
-                    class="form-input"
-                    placeholder=" "
-                    required
-                  />
-                  <label for="signin-password" class="form-label"
-                    >Mot de passe</label
-                  >
-                  <button
-                    type="button"
-                    class="password-toggle"
-                    onclick="togglePasswordVisibility('signin-password')"
-                  >
-                    <svg
-                      class="eye-icon"
-                      width="20"
-                      height="20"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        d="M1 12S5 4 12 4s11 8 11 8-4 8-11 8-11-8-11-8z"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                      />
-                      <circle
-                        cx="12"
-                        cy="12"
-                        r="3"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                      />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-
-              <!-- Sign Up Form Fields -->
-              <div id="signup-fields" class="form-fields hidden">
-                <div class="form-group floating-label">
-                  <input
-                    type="text"
-                    id="signup-name"
-                    class="form-input"
-                    placeholder=" "
-                    required
-                  />
-                  <label for="signup-name" class="form-label"
-                    >Nom complet</label
-                  >
-                </div>
-                <div class="form-group floating-label">
-                  <input
-                    type="email"
-                    id="signup-email"
-                    class="form-input"
-                    placeholder=" "
-                    required
-                  />
-                  <label for="signup-email" class="form-label">Email</label>
-                </div>
-                <div class="form-group floating-label password-field">
-                  <input
-                    type="password"
-                    id="signup-password"
-                    class="form-input"
-                    placeholder=" "
-                    required
-                  />
-                  <label for="signup-password" class="form-label"
-                    >Mot de passe</label
-                  >
-                  <button
-                    type="button"
-                    class="password-toggle"
-                    onclick="togglePasswordVisibility('signup-password')"
-                  >
-                    <svg
-                      class="eye-icon"
-                      width="20"
-                      height="20"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        d="M1 12S5 4 12 4s11 8 11 8-4 8-11 8-11-8-11-8z"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                      />
-                      <circle
-                        cx="12"
-                        cy="12"
-                        r="3"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                      />
-                    </svg>
-                  </button>
-                </div>
-                <div class="form-group floating-label password-field">
-                  <input
-                    type="password"
-                    id="signup-confirm-password"
-                    class="form-input"
-                    placeholder=" "
-                    required
-                  />
-                  <label for="signup-confirm-password" class="form-label"
-                    >Confirmer le mot de passe</label
-                  >
-                  <button
-                    type="button"
-                    class="password-toggle"
-                    onclick="togglePasswordVisibility('signup-confirm-password')"
-                  >
-                    <svg
-                      class="eye-icon"
-                      width="20"
-                      height="20"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        d="M1 12S5 4 12 4s11 8 11 8-4 8-11 8-11-8-11-8z"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                      />
-                      <circle
-                        cx="12"
-                        cy="12"
-                        r="3"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                      />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <!-- Fixed Action Buttons -->
-            <div class="form-actions">
-              <button id="signin-submit-btn" class="auth-btn primary">
-                Se connecter
-              </button>
-              <button id="signup-submit-btn" class="auth-btn primary hidden">
-                Créer un compte
-              </button>
-              <p class="form-switch">
-                <span id="signin-switch-text">Pas de compte ?</span>
-                <span id="signup-switch-text" class="hidden"
-                  >Déjà un compte ?</span
-                >
-                <a href="#" id="show-signup" class="form-link"
-                  >Créer un compte</a
-                >
-                <a href="#" id="show-signin" class="form-link hidden"
-                  >Se connecter</a
-                >
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <!-- Main Content -->
-    <main id="main-content" class="main-content hidden">
+    <main id="main-content" class="main-content">
       <form id="tryon-form">
         <div class="steps-container">
           <!-- Step 1: Upload Photo -->
@@ -338,65 +42,92 @@
                   Choisissez une photo claire de vous-même pour de meilleurs
                   résultats
                 </p>
-                <!-- File picker icon button -->
-                <button
-                  type="button"
-                  id="person-file-picker-btn"
-                  class="preview-action-btn file-picker-btn"
-                  title="Changer la photo"
-                  aria-label="Changer la photo"
-                  tabindex="0"
-                >
-                  <svg
-                    class="action-icon"
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                    aria-hidden="true"
-                  >
-                    <path
-                      d="M14.5 4H20.5C21.6 4 22.5 4.9 22.5 6V20C22.5 21.1 21.6 22 20.5 22H3.5C2.4 22 1.5 21.1 1.5 20V6C1.5 4.9 2.4 4 3.5 4H9.5L11.5 2H16.5L14.5 4Z"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    />
-                    <path
-                      d="M12 17C13.6569 17 15 15.6569 15 14C15 12.3431 13.6569 11 12 11C10.3431 11 9 12.3431 9 14C9 15.6569 10.3431 17 12 17Z"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    />
-                  </svg>
-                </button>
               </div>
             </div>
 
             <div class="step-body">
-              <div id="person-upload-container" class="upload-container">
-                <div class="upload-area">
-                  <input
-                    type="file"
-                    id="person-image"
-                    name="personImage"
-                    accept="image/*"
-                    required
-                    class="file-input"
-                  />
-                  <label for="person-image" class="upload-label">
-                    <div class="upload-icon">📷</div>
-                    <div class="upload-text">
-                      <span class="upload-title"
-                        >Cliquez pour télécharger votre photo</span
-                      >
-                      <span class="upload-subtitle"
-                        >PNG, JPG, ou WebP jusqu'à 10MB</span
-                      >
+              <!-- Photo Selection Container -->
+              <div
+                id="photo-selection-container"
+                class="photo-selection-container"
+              >
+                <div id="person-upload-container" class="upload-container">
+                  <div class="upload-area">
+                    <input
+                      type="file"
+                      id="person-image"
+                      name="personImage"
+                      accept="image/*"
+                      required
+                      class="file-input"
+                    />
+                    <label for="person-image" class="upload-label">
+                      <div class="upload-icon">📷</div>
+                      <div class="upload-text">
+                        <span class="upload-title"
+                          >Cliquez pour télécharger votre photo</span
+                        >
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                <!-- Demo Pictures Section -->
+                <div class="demo-pictures-section">
+                  <div class="demo-pictures-grid">
+                    <div
+                      class="demo-picture-item"
+                      data-demo-src="demo_pics/Audrey-Fleurot.jpg"
+                    >
+                      <img
+                        src="demo_pics/Audrey-Fleurot.jpg"
+                        alt="Demo Photo 1"
+                        class="demo-picture"
+                      />
+                      <div class="demo-picture-overlay">
+                        <span class="demo-picture-label">Audrey</span>
+                      </div>
                     </div>
-                  </label>
+                    <div
+                      class="demo-picture-item"
+                      data-demo-src="demo_pics/french_man.webp"
+                    >
+                      <img
+                        src="demo_pics/french_man.webp"
+                        alt="Demo Photo 2"
+                        class="demo-picture"
+                      />
+                      <div class="demo-picture-overlay">
+                        <span class="demo-picture-label">French Man</span>
+                      </div>
+                    </div>
+                    <div
+                      class="demo-picture-item"
+                      data-demo-src="demo_pics/frwm2.webp"
+                    >
+                      <img
+                        src="demo_pics/frwm2.webp"
+                        alt="Demo Photo 3"
+                        class="demo-picture"
+                      />
+                      <div class="demo-picture-overlay">
+                        <span class="demo-picture-label">Model 1</span>
+                      </div>
+                    </div>
+                    <div
+                      class="demo-picture-item"
+                      data-demo-src="demo_pics/frwm3.jpg"
+                    >
+                      <img
+                        src="demo_pics/frwm3.jpg"
+                        alt="Demo Photo 4"
+                        class="demo-picture"
+                      />
+                      <div class="demo-picture-overlay">
+                        <span class="demo-picture-label">Model 2</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -406,6 +137,29 @@
               >
                 <div class="preview-header">
                   <h3>Votre Photo</h3>
+                  <button
+                    type="button"
+                    id="clear-person-image-btn"
+                    class="clear-selection-btn"
+                    title="Changer de photo"
+                    aria-label="Changer de photo"
+                  >
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M18 6L6 18M6 6L18 18"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                    </svg>
+                  </button>
                 </div>
                 <div class="preview-image-container">
                   <img
@@ -428,75 +182,6 @@
                   Choisissez n'importe quel article de vêtement de cette page
                   web
                 </p>
-                <!-- Selection icon button -->
-                <button
-                  type="button"
-                  id="clothing-selection-btn"
-                  class="preview-action-btn selection-btn"
-                  title="Changer la sélection"
-                  aria-label="Changer la sélection"
-                  tabindex="0"
-                >
-                  <svg
-                    class="action-icon"
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                    aria-hidden="true"
-                  >
-                    <path
-                      d="M3 7V5C3 3.89543 3.89543 3 5 3H19C20.1046 3 21 3.89543 21 5V7"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    />
-                    <path
-                      d="M8 21H16"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    />
-                    <path
-                      d="M12 17V21"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    />
-                    <path
-                      d="M3 7L5 7H19L21 7"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    />
-                    <path
-                      d="M5 7V19C5 20.1046 5.89543 21 7 21H17C18.1046 21 19 20.1046 19 19V7"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    />
-                    <path
-                      d="M9 9V15"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    />
-                    <path
-                      d="M15 9V15"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    />
-                  </svg>
-                </button>
               </div>
             </div>
 
@@ -516,6 +201,29 @@
               >
                 <div class="preview-header">
                   <h3>Article Sélectionné</h3>
+                  <button
+                    type="button"
+                    id="clear-clothing-image-btn"
+                    class="clear-selection-btn"
+                    title="Changer de vêtement"
+                    aria-label="Changer de vêtement"
+                  >
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M18 6L6 18M6 6L18 18"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                    </svg>
+                  </button>
                 </div>
                 <div class="preview-image-container">
                   <img
