@@ -1125,9 +1125,6 @@ async function authenticateUser(email, password, type, name = null) {
       // Save to storage
       await saveToStorage(STORAGE_KEYS.USER_AUTH, currentUser);
 
-      // Sync user session for fullscreen mode
-      await syncUserSession();
-
       // Show success message with user name first
       const message =
         type === "signup"
@@ -1536,24 +1533,6 @@ function updateUserInterface(isAuthenticated) {
  */
 function getCurrentUser() {
   return currentUser;
-}
-
-/**
- * Sync user session data to ensure consistency between popup and fullscreen modes
- * This function is called after successful login/signup to ensure both modes have the same user data
- */
-async function syncUserSession() {
-  try {
-    if (currentUser && currentUser.accessToken) {
-      // Save user session to storage (this will be picked up by fullscreen.js)
-      await saveToStorage(STORAGE_KEYS.USER_AUTH, currentUser);
-      console.log("User session synced to storage for fullscreen mode");
-    } else {
-      console.log("No current user to sync");
-    }
-  } catch (error) {
-    console.error("Failed to sync user session:", error);
-  }
 }
 
 /**
