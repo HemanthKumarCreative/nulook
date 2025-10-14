@@ -141,9 +141,9 @@
       .filter((u) => !!u)
       .filter((u) => !u.startsWith("data:")) // prefer fetchable URLs
       .filter((u) => {
-        // Accept images with common extensions or no extension (API endpoints)
+        // Accept only PNG, JPG, WebP, and AVIF formats or API endpoints
         return (
-          /\.(png|jpe?g|webp|gif|svg|bmp|tiff?)(\?|#|$)/i.test(u) ||
+          /\.(png|jpe?g|webp|avif)(\?|#|$)/i.test(u) ||
           /\/images?\//i.test(u) ||
           /\/media\//i.test(u) ||
           /\/assets?\//i.test(u) ||

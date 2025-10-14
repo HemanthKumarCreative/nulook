@@ -14,6 +14,7 @@ const STORAGE_KEYS = {
   LAST_SESSION_DATA: "nusense_tryon_last_session",
   CART_ITEMS: "nusense_tryon_cart_items",
   PRODUCT_INFO: "nusense_tryon_product_info",
+  GENERATION_STATE: "nusense_tryon_generation_state",
 };
 
 // --- DOM Elements ---
@@ -209,6 +210,28 @@ async function restoreUploadedImage() {
     // Hide upload container when image is restored
     document.getElementById("person-upload-container").classList.add("hidden");
 
+    // Hide demo pictures section and or separator when image is restored
+    const demoPicturesSection = document.querySelector(
+      ".demo-pictures-section"
+    );
+    if (demoPicturesSection) {
+      demoPicturesSection.style.display = "none";
+    }
+
+    const orSeparator = document.querySelector(".or-separator");
+    if (orSeparator) {
+      orSeparator.style.display = "none";
+    }
+
+    // Remove gap from container to eliminate empty space
+    const photoSelectionContainer = document.getElementById(
+      "photo-selection-container"
+    );
+    if (photoSelectionContainer) {
+      photoSelectionContainer.style.gap = "0";
+      photoSelectionContainer.style.minHeight = "auto";
+    }
+
     // Create a mock file object for the input
     const response = await fetch(imageData.dataUrl);
     const blob = await response.blob();
@@ -292,6 +315,80 @@ async function saveSessionData() {
   } catch (error) {
     console.error("Failed to save session data:", error);
   }
+}
+
+/**
+ * Save generation state to storage
+ * @param {Object} state - Generation state data
+ * @returns {Promise<void>}
+ */
+async function saveGenerationState(state) {
+  try {
+    const generationState = {
+      ...state,
+      timestamp: Date.now(),
+    };
+
+    await saveToStorage(STORAGE_KEYS.GENERATION_STATE, generationState);
+    console.log("Generation state saved:", generationState);
+  } catch (error) {
+    console.error("Failed to save generation state:", error);
+  }
+}
+
+/**
+ * Restore generation state from storage
+ * @returns {Promise<Object|null>} - Generation state or null if not found
+ */
+async function restoreGenerationState() {
+  try {
+    const state = await getFromStorage(STORAGE_KEYS.GENERATION_STATE);
+    if (!state) return null;
+
+    // Check if generation state is recent (within last 10 minutes)
+    const now = Date.now();
+    const stateAge = now - state.timestamp;
+    const maxAge = 10 * 60 * 1000; // 10 minutes
+
+    if (stateAge > maxAge) {
+      // Generation state is too old, clean it up
+      await clearStorageKey(STORAGE_KEYS.GENERATION_STATE);
+      return null;
+    }
+
+    console.log("Generation state restored:", state);
+    return state;
+  } catch (error) {
+    console.error("Failed to restore generation state:", error);
+    return null;
+  }
+}
+
+/**
+ * Clear generation state from storage
+ * @returns {Promise<void>}
+ */
+async function clearGenerationState() {
+  try {
+    await clearStorageKey(STORAGE_KEYS.GENERATION_STATE);
+    console.log("Generation state cleared");
+  } catch (error) {
+    console.error("Failed to clear generation state:", error);
+  }
+}
+
+/**
+ * Convert file to data URL
+ * @param {File} file - File to convert
+ * @returns {Promise<string>} - Data URL
+ */
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 }
 
 /**
@@ -784,12 +881,27 @@ async function handlePersonImageSelection() {
         .getElementById("person-upload-container")
         .classList.add("hidden");
 
-      // Hide the entire photo selection container when user uploads their own file
+      // Hide only the demo pictures section when user uploads their own file
+      const demoPicturesSection = document.querySelector(
+        ".demo-pictures-section"
+      );
+      if (demoPicturesSection) {
+        demoPicturesSection.style.display = "none";
+      }
+
+      // Hide the or separator as well
+      const orSeparator = document.querySelector(".or-separator");
+      if (orSeparator) {
+        orSeparator.style.display = "none";
+      }
+
+      // Remove gap from container to eliminate empty space
       const photoSelectionContainer = document.getElementById(
         "photo-selection-container"
       );
       if (photoSelectionContainer) {
-        photoSelectionContainer.style.display = "none";
+        photoSelectionContainer.style.gap = "0";
+        photoSelectionContainer.style.minHeight = "auto";
       }
 
       // Save the uploaded image to storage
@@ -797,6 +909,7 @@ async function handlePersonImageSelection() {
 
       // Update layout state
       updateGenerateButtonState();
+      updateLayoutState(true, !!selectedClothingUrl);
     };
     reader.readAsDataURL(file);
   } else {
@@ -879,6 +992,7 @@ async function handleImageSelection(url) {
 
   // Update layout state
   updateGenerateButtonState();
+  updateLayoutState(personImageInput.files.length > 0, true);
 }
 
 /**
@@ -2566,10 +2680,32 @@ async function handleFormSubmit(event) {
   enableDownload(false);
   setBusy(true);
 
+  // Save generation state
+  await saveGenerationState({
+    isGenerating: true,
+    selectedClothingUrl,
+    personImageData: personImageInput.files[0]
+      ? await fileToDataUrl(personImageInput.files[0])
+      : null,
+    status: "starting",
+    progress: 0,
+  });
+
   try {
     // Step 1: Fetch the selected website image with CORS handling
     setStatus("📥 Récupération de l'image de vêtement depuis le site web...");
     updateProgressBar(20);
+
+    // Update generation state
+    await saveGenerationState({
+      isGenerating: true,
+      selectedClothingUrl,
+      personImageData: personImageInput.files[0]
+        ? await fileToDataUrl(personImageInput.files[0])
+        : null,
+      status: "fetching_clothing",
+      progress: 20,
+    });
     const clothingBlob = await fetchImageWithCorsHandling(
       selectedClothingUrl,
       inFlightController.signal
@@ -2578,6 +2714,17 @@ async function handleFormSubmit(event) {
     // Step 2: Create FormData and append both images
     setStatus("🎨 Préparation des images pour la génération...");
     updateProgressBar(40);
+
+    // Update generation state
+    await saveGenerationState({
+      isGenerating: true,
+      selectedClothingUrl,
+      personImageData: personImageInput.files[0]
+        ? await fileToDataUrl(personImageInput.files[0])
+        : null,
+      status: "preparing_images",
+      progress: 40,
+    });
     const formData = new FormData();
     formData.append("personImage", personImageInput.files[0]);
     // Give the blob a filename so the server's 'multer' can process it
@@ -2586,6 +2733,17 @@ async function handleFormSubmit(event) {
     // Step 3: Send to the backend (expects JSON response)
     setStatus("💫 Laissez-nous faire la magie... Cela peut prendre un moment.");
     updateProgressBar(60);
+
+    // Update generation state
+    await saveGenerationState({
+      isGenerating: true,
+      selectedClothingUrl,
+      personImageData: personImageInput.files[0]
+        ? await fileToDataUrl(personImageInput.files[0])
+        : null,
+      status: "generating",
+      progress: 60,
+    });
 
     const apiResponse = await fetch(API_URL, {
       method: "POST",
@@ -2625,6 +2783,9 @@ async function handleFormSubmit(event) {
 
       // Save the generated image to storage
       await saveGeneratedImage(data.image);
+
+      // Clear generation state since we're done
+      await clearGenerationState();
 
       // Show success result
       showSuccessResult();
@@ -2680,8 +2841,68 @@ async function handleFormSubmit(event) {
     updateGenerateButtonState(); // re-enable based on current inputs
     inFlightController = null;
 
+    // Clear generation state on error or completion
+    await clearGenerationState();
+
     // Ensure button is completely reset
     generateButton.classList.remove("button-success", "button-error");
+  }
+}
+
+/**
+ * Continue generation from saved state
+ * @param {Object} generationState - Saved generation state
+ * @returns {Promise<void>}
+ */
+async function continueGeneration(generationState) {
+  try {
+    console.log("Continuing generation from saved state:", generationState);
+
+    // Restore the UI state
+    setBusy(true);
+    setStatus("🔄 Reprise de la génération en cours...");
+    updateProgressBar(generationState.progress || 0);
+
+    // Restore person image if available
+    if (generationState.personImageData) {
+      const response = await fetch(generationState.personImageData);
+      const blob = await response.blob();
+      const file = new File([blob], "restored-person-image.jpg", {
+        type: blob.type,
+      });
+
+      const dataTransfer = new DataTransfer();
+      dataTransfer.items.add(file);
+      personImageInput.files = dataTransfer.files;
+
+      personPreviewImage.src = generationState.personImageData;
+      personPreviewContainer.classList.remove("hidden");
+      document
+        .getElementById("person-upload-container")
+        .classList.add("hidden");
+    }
+
+    // Restore clothing selection if available
+    if (generationState.selectedClothingUrl) {
+      selectedClothingUrl = generationState.selectedClothingUrl;
+      previewImage.src = generationState.selectedClothingUrl;
+      previewContainer.classList.remove("hidden");
+    }
+
+    // Continue the generation process from where it left off
+    // Since we can't resume the actual API call, we'll restart it
+    // but show a message that we're continuing
+    setStatus("🔄 Reprise de la génération... Veuillez patienter.");
+
+    // Trigger a new generation
+    const form = document.getElementById("tryon-form");
+    const event = new Event("submit", { bubbles: true, cancelable: true });
+    form.dispatchEvent(event);
+  } catch (error) {
+    console.error("Failed to continue generation:", error);
+    setStatus("❌ Erreur lors de la reprise de la génération.");
+    setBusy(false);
+    await clearGenerationState();
   }
 }
 
@@ -2692,6 +2913,14 @@ async function handleFormSubmit(event) {
 async function restorePreviousSession() {
   try {
     console.log("Restoring previous session...");
+
+    // Check for ongoing generation first
+    const generationState = await restoreGenerationState();
+    if (generationState && generationState.isGenerating) {
+      console.log("Found ongoing generation, continuing...");
+      await continueGeneration(generationState);
+      return;
+    }
 
     // Restore uploaded image
     const uploadedRestored = await restoreUploadedImage();
@@ -2744,12 +2973,27 @@ async function handleDemoPictureSelection(demoSrc) {
     personPreviewContainer.classList.remove("hidden");
     document.getElementById("person-upload-container").classList.add("hidden");
 
-    // Hide the entire photo selection container when demo image is selected
+    // Hide only the demo pictures section when demo image is selected
+    const demoPicturesSection = document.querySelector(
+      ".demo-pictures-section"
+    );
+    if (demoPicturesSection) {
+      demoPicturesSection.style.display = "none";
+    }
+
+    // Hide the or separator as well
+    const orSeparator = document.querySelector(".or-separator");
+    if (orSeparator) {
+      orSeparator.style.display = "none";
+    }
+
+    // Remove gap from container to eliminate empty space
     const photoSelectionContainer = document.getElementById(
       "photo-selection-container"
     );
     if (photoSelectionContainer) {
-      photoSelectionContainer.style.display = "none";
+      photoSelectionContainer.style.gap = "0";
+      photoSelectionContainer.style.minHeight = "auto";
     }
 
     // Save the demo image to storage
@@ -2757,6 +3001,7 @@ async function handleDemoPictureSelection(demoSrc) {
 
     // Update layout state
     updateGenerateButtonState();
+    updateLayoutState(true, !!selectedClothingUrl);
 
     setStatus("✅ Photo de démonstration sélectionnée !");
   } catch (error) {
@@ -2894,12 +3139,24 @@ async function handleClearPersonImage() {
   personPreviewContainer.classList.add("hidden");
   document.getElementById("person-upload-container").classList.remove("hidden");
 
-  // Show the photo selection container again when selection is cleared
+  // Show the demo pictures section and or separator again when selection is cleared
+  const demoPicturesSection = document.querySelector(".demo-pictures-section");
+  if (demoPicturesSection) {
+    demoPicturesSection.style.display = "flex";
+  }
+
+  const orSeparator = document.querySelector(".or-separator");
+  if (orSeparator) {
+    orSeparator.style.display = "flex";
+  }
+
+  // Restore gap and min-height to container
   const photoSelectionContainer = document.getElementById(
     "photo-selection-container"
   );
   if (photoSelectionContainer) {
-    photoSelectionContainer.style.display = "flex";
+    photoSelectionContainer.style.gap = "12px";
+    photoSelectionContainer.style.minHeight = "280px";
   }
 
   // Recreate demo pictures section when selection is cleared
@@ -2910,6 +3167,7 @@ async function handleClearPersonImage() {
 
   // Update layout state
   updateGenerateButtonState();
+  updateLayoutState(false, !!selectedClothingUrl);
 
   setStatus("🔄 Sélection effacée. Choisissez une nouvelle photo.");
 }
@@ -2931,6 +3189,7 @@ async function handleClearClothingImage() {
 
   // Update layout state
   updateGenerateButtonState();
+  updateLayoutState(personImageInput.files.length > 0, false);
 
   setStatus("🔄 Sélection de vêtement effacée. Choisissez un nouvel article.");
 }
